@@ -1,0 +1,13 @@
+[workspace]
+members = ["cling"]
+
+[workspace.package]
+version = "0.0.0"
+edition = "2021"
+authors = ["Ahmed Farghal <me@asoli.dev>"]
+license = "Apache-2.0 OR MIT"
+
+
+[workspace.dependencies]
+tracing = { version = "0.1", features = ["log"] }
+thiserror = { version = "1.0.43" }
