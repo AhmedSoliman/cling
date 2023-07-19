@@ -1,5 +1,6 @@
 [package]
 name = "cling"
+description = "[WIP] An opinionated Rust framework for building multi-level command-line applications on top of clap.rs"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
