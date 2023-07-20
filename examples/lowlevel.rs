@@ -20,8 +20,10 @@ impl<'a> FromCliArgs<'a> for NotSoCommonOpts {
 }
 
 fn noop(
+    // by value,
     opts: CommonOpts,
-    other_opts: NotSoCommonOpts,
+    // see, we can also take reference!
+    other_opts: &NotSoCommonOpts,
 ) -> Result<(), anyhow::Error> {
     println!("noop: {:?} {:?}", opts, other_opts);
     Ok(())
