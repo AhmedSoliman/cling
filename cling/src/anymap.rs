@@ -1,5 +1,5 @@
-use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use std::any::{type_name, Any, TypeId};
+use std::collections::{HashMap, HashSet};
 use std::hash::{BuildHasherDefault, Hasher};
 
 // Copied/inspired from Axum's extensions.
@@ -34,6 +34,7 @@ pub struct AnyMap {
         Box<dyn Any + Send + Sync>,
         BuildHasherDefault<IdHasher>,
     >,
+    known_types: HashSet<String>,
 }
 
 impl AnyMap {
@@ -56,6 +57,7 @@ impl AnyMap {
     /// Inserts a value into the collected arguments. If the value already
     /// exists, it will be returned.
     pub fn insert<T: Send + Sync + 'static>(&mut self, val: T) -> Option<T> {
+        self.known_types.insert(type_name::<T>().to_owned());
         self.map
             .insert(TypeId::of::<T>(), Box::new(val))
             .and_then(|boxed| {
@@ -64,6 +66,10 @@ impl AnyMap {
                     .ok()
                     .map(|boxed| *boxed)
             })
+    }
+
+    pub fn known_types(&self) -> Vec<String> {
+        self.known_types.iter().cloned().collect()
     }
 
     #[inline]

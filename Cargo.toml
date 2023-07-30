@@ -1,5 +1,5 @@
 [workspace]
-members = ["cling"]
+members = ["cling", "cling-derive"]
 
 [workspace.package]
 version = "0.0.0-alpha.1"
@@ -11,3 +11,4 @@ license = "Apache-2.0 OR MIT"
 [workspace.dependencies]
 tracing = { version = "0.1", features = ["log"] }
 thiserror = { version = "1.0.43" }
+static_assertions = { version = "1.1.0" }

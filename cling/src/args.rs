@@ -1,17 +1,87 @@
 use crate::anymap::AnyMap;
 
-pub trait FromCliArgs<'a>: Sized {
+// This is a clever trick inspired by "autref" specialization by
+// [dtolnay](https://github.com/dtolnay/case-studies/blob/master/autoref-specialization/README.md) to
+// that allows us to selectively choose which types can be collected based on a
+// generic bound without the unstable specialization feature.
+pub struct Collectable;
+impl Collectable {
+    pub fn can_collect(&self) -> bool {
+        true
+    }
+}
+
+pub struct Uncollectable;
+
+impl Uncollectable {
+    pub fn can_collect(&self) -> bool {
+        false
+    }
+}
+
+pub trait CollectableKind {
+    fn as_collectable(&self) -> Collectable {
+        Collectable
+    }
+}
+
+// Does not require autoref is called with &(arg).collectable()
+impl<T> CollectableKind for T where T: for<'a> CliParam<'a> + Clone + Send + Sync
+{}
+
+pub trait UnknownKind {
+    fn as_collectable(&self) -> Uncollectable {
+        Uncollectable
+    }
+}
+
+// Note the type &T here, this means that it's lower priority.
+impl<T> UnknownKind for &T {}
+
+pub trait CliParam<'a>: Sized {
     fn from_args(args: &'a CollectedArgs) -> Option<Self>;
 }
 
-/// Returns the value by reference if T implements FromCliArgs!
-impl<'a, T> FromCliArgs<'a> for &'a T
+// implementation is per type that derives CliParam
+// impl<'a, T> CliParam<'a> for T
+// where
+//     T: Parser + Send + Sync + Clone + 'static,
+// {
+//     fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+//         args.get::<Self>().cloned()
+//     }
+// }
+
+/// Returns the value by reference if T implements CliParam!
+impl<'a, T> CliParam<'a> for &'a T
 where
     T: Sync + Send + 'static,
-    T: FromCliArgs<'a>,
+    T: CliParam<'a> + 'static,
 {
     fn from_args(args: &'a CollectedArgs) -> Option<Self> {
         args.get::<T>()
+    }
+}
+
+impl<'a, T> CliParam<'a> for Vec<T>
+where
+    T: Sync + Send + 'static,
+    T: CliParam<'a> + 'static,
+    Vec<T>: Clone,
+{
+    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+        args.get::<Vec<T>>().cloned()
+    }
+}
+
+impl<'a, T> CliParam<'a> for Option<T>
+where
+    T: Sync + Send + 'static,
+    T: CliParam<'a> + 'static,
+    Option<T>: Clone,
+{
+    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+        args.get::<Option<T>>().cloned()
     }
 }
 
@@ -50,6 +120,12 @@ impl CollectedArgs {
         if let Some(ref mut map) = self.map {
             map.clear();
         }
+    }
+
+    pub fn collected_types(&self) -> Vec<String> {
+        self.map
+            .as_ref()
+            .map_or(Vec::new(), |map| map.known_types())
     }
 
     #[inline]

@@ -3,7 +3,7 @@
 
 
 ## High-level direction
-* Support for sync and async Rust command-line applications
+* Supports async Rust command-line applications and don't tie to specific async runtime.
 * Promote specific design patterns with limited escape hatches
 * Creates CLIs that follow design best practices by default
     * Support for configuration
@@ -14,3 +14,4 @@
     * Support for building REPLs
     * Batteries included for output colorization, styling, and tty detection
     * Separates data from presentation layer (debatable)
+    * Do we want to support non-derive clap as well? No!

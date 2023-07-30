@@ -1,4 +1,4 @@
-use cling::args::{CollectedArgs, FromCliArgs};
+use cling::args::{CliParam, CollectedArgs};
 use cling::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -7,19 +7,19 @@ struct CommonOpts;
 #[derive(Clone, Debug)]
 struct NotSoCommonOpts;
 
-impl<'a> FromCliArgs<'a> for CommonOpts {
+impl<'a> CliParam<'a> for CommonOpts {
     fn from_args(args: &'a CollectedArgs) -> Option<Self> {
         args.get::<Self>().cloned()
     }
 }
 
-impl<'a> FromCliArgs<'a> for NotSoCommonOpts {
+impl<'a> CliParam<'a> for NotSoCommonOpts {
     fn from_args(args: &'a CollectedArgs) -> Option<Self> {
         args.get::<Self>().cloned()
     }
 }
 
-fn noop(
+async fn noop(
     // by value,
     opts: CommonOpts,
     // see, we can also take reference!
@@ -29,17 +29,18 @@ fn noop(
     Ok(())
 }
 
-fn handle<'a, X, T: CliHandler<'a, X>>(
+async fn handle<'a, X, T: CliHandler<'a, X>>(
     args: &'a mut CollectedArgs,
     handler: T,
 ) -> CliResult {
-    handler.call(args)
+    handler.call(args).await
 }
 
-fn main() -> CliResult {
+#[tokio::main]
+async fn main() -> CliResult {
     let mut args = CollectedArgs::default();
     args.insert(CommonOpts);
     args.insert(NotSoCommonOpts);
 
-    handle(&mut args, noop)
+    handle(&mut args, noop).await
 }

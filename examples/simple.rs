@@ -1,33 +1,49 @@
+use cling::error::CliErrorHandler;
 use cling::prelude::*;
 use colored::Colorize;
+use static_assertions::assert_impl_all;
 
-#[derive(Parser, Debug, Clone)]
+#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
+#[cling(run = "init")]
 pub struct CliOpts {
+    /// What?
+    #[arg(short)]
+    use_me: bool,
+    #[arg(short)]
+    colors: Option<Vec<Colors>>,
     #[command(flatten)]
     pub common: CommonOpts,
-
     #[command(subcommand)]
     pub command: Commands,
 }
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(CliParam, ValueEnum, Debug, Clone)]
+pub enum Colors {
+    Red,
+    Green,
+    Blue,
+}
+
+#[derive(CliRunnable, Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// Hey this is the first command
-    Calculator(CalculatorOpts),
+    /// A handy calculator
+    Calculator(Calculator),
     /// Hey this is the second command
+    #[cling(run = "groot")]
     WhoAmI,
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(CliParam, Parser, Debug, Clone)]
 pub struct CommonOpts {
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub debug: u8,
 }
 
-#[derive(Parser, Debug, Clone)]
-pub struct CalculatorOpts {
+#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[cling(run = "run_calc")]
+pub struct Calculator {
     /// Enable color output
     #[arg(short, long, global = true)]
     pub color: bool,
@@ -36,7 +52,7 @@ pub struct CalculatorOpts {
     pub operation: CalcOperations,
 }
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(CliRunnable, Subcommand, Debug, Clone)]
 pub enum CalcOperations {
     /// Add two numbers
     Add(AddOpts),
@@ -44,21 +60,47 @@ pub enum CalcOperations {
     Subtract(SubtractOpts),
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[cling(run = "run_add")]
 pub struct AddOpts {
     pub num1: u64,
     pub num2: u64,
 }
 
-#[derive(Parser, Debug, Clone)]
+#[derive(CliRunnable, Parser, Debug, Clone)]
+#[cling(run = "run_subtract")]
 pub struct SubtractOpts {
     pub num1: u64,
     pub num2: u64,
 }
 
+#[derive(Clone, Debug)]
+struct Database {
+    _data: String,
+}
+
+async fn run_calc(calc: &Calculator) {
+    println!(">> Calculator: {:?}", calc);
+}
+
+async fn init(
+    State(database): State<Database>,
+    common: &CommonOpts,
+    colors: Option<Vec<Colors>>,
+) {
+    println!(
+        ">> Hello world! {:?}, color: {:?}, database: {:?}",
+        common, colors, database
+    );
+}
+
+async fn groot() {
+    println!("I'm groot!");
+}
+
 // my add handler
-pub fn run_add(
-    calc_opts: &CalculatorOpts,
+pub async fn run_add(
+    calc: &Calculator,
     add_opts: &AddOpts,
 ) -> Result<(), CliError> {
     let output = format!(
@@ -67,7 +109,8 @@ pub fn run_add(
         add_opts.num2,
         add_opts.num1 + add_opts.num2
     );
-    if calc_opts.color {
+
+    if calc.color {
         println!("{}", output.green());
     } else {
         println!("{output}");
@@ -76,18 +119,20 @@ pub fn run_add(
     Ok(())
 }
 
-pub fn noop() {}
+// Fails in runtime, we expect AddOpts but this will never be collected in the
+// subtraction path.
+pub async fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
+    println!("Never gets called!");
+}
 
-fn main() -> CliResult {
-    let _opts = CliOpts::parse();
-    // match &opts.command {
-    //     | Commands::Calculator(calc_opts) => {
-    //         match &calc_opts.operation {
-    //             | CalcOperations::Add(add_opts) => run_add(calc_opts,
-    // add_opts),             | CalcOperations::Subtract(sub_opts) =>
-    // noop(),         }
-    //     }
-    //     | Commands::WhoAmI => noop(),
-    // }
-    Ok(())
+assert_impl_all!(CliOpts: CliApp, cling::clap::Parser, Send, Sync, CliRunnable);
+
+#[tokio::main]
+async fn main() {
+    let database = Database {
+        _data: "Loads of data".to_owned(),
+    };
+    Cling::<CliOpts>::run_with_state(database)
+        .await
+        .print_err_and_exit();
 }
