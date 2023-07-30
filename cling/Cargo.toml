@@ -9,21 +9,21 @@ include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
 
 [dependencies]
 cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.1", optional = true }
-clap = { version = "4.3", features = ["env", "derive", "wrap_help"] }
-clap-stdin = { version = "0.2.0" }
-env_logger = "0.10.0"
+clap = { version = "4", features = ["env", "derive", "wrap_help"] }
+clap-stdin = { version = "0.2" }
+env_logger = "0.10"
 tracing = { workspace = true }
 thiserror = { workspace = true }
 static_assertions = { workspace = true }
-anyhow = { version = "1.0.72" }
-colored = { version = "2.0.4" }
-async-trait = { version = "0.1.72" }
-indoc = { version = "2.0.3" }
-termcolor = { version = "1.2.0" }
+anyhow = { version = "1.0" }
+colored = { version = "2.0" }
+async-trait = { version = "0.1" }
+indoc = { version = "2.0" }
+termcolor = { version = "1.2" }
 
 [dev-dependencies]
-trybuild = { version = "1.0.82" }
-tokio = { version = "1.29.1", features = ["full"] }
+trybuild = { version = "1.0" }
+tokio = { version = "1", features = ["full"] }
 
 [features]
 default = ["derive"]
