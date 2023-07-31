@@ -12,8 +12,6 @@ pub trait CliErrorHandler {
 pub enum CliError {
     #[error("Invalid Handler: {0}")]
     InvalidHandler(String),
-    #[error("Internal Error: {0}")]
-    InternalError(String),
     #[error("Aborted!")]
     Abort,
     #[error("Aborted: {0}")]
@@ -39,8 +37,6 @@ where
     }
 
     fn print_err(self) {
-        let mut stderr = StandardStream::stderr(ColorChoice::Auto);
-
         match self {
             | Ok(_) => {}
             | Err(e) => {
@@ -50,29 +46,34 @@ where
                         // Clap handles colors
                         e.print().unwrap();
                     }
-                    | CliError::InternalError(_) => todo!(),
-                    | CliError::Abort => todo!(),
-                    | CliError::AbortMessage(_) => todo!(),
-                    | CliError::Other(_) => todo!(),
+                    | CliError::Abort => {
+                        print_formatted_error("Aborted!", "".to_owned());
+                    }
+                    | CliError::AbortMessage(e) => {
+                        print_formatted_error("", format!("{}", e));
+                    }
+                    | CliError::Other(e) => {
+                        print_formatted_error("Error: ", format!("{}", e));
+                    }
                     | CliError::InvalidHandler(msg) => {
-                        stderr
-                            .set_color(
-                                ColorSpec::new()
-                                    .set_fg(Some(Color::Red))
-                                    .set_bold(true),
-                            )
-                            .unwrap();
-                        write!(
-                            &mut stderr,
-                            "\n\n** Cling Handler Design Error **\n\n"
-                        )
-                        .unwrap();
-                        stderr.reset().unwrap();
-                        write!(&mut stderr, "{}", msg).unwrap();
+                        print_formatted_error(
+                            "\n\n** Cling Handler Design Error **\n\n",
+                            msg,
+                        );
                     }
                 };
             }
         };
-        stderr.reset().unwrap();
     }
+}
+
+fn print_formatted_error(heading: &str, msg: String) {
+    let mut stderr = StandardStream::stderr(ColorChoice::Auto);
+
+    stderr
+        .set_color(ColorSpec::new().set_fg(Some(Color::Red)).set_bold(true))
+        .unwrap();
+    write!(&mut stderr, "{}", heading).unwrap();
+    stderr.reset().unwrap();
+    writeln!(&mut stderr, "{}", msg).unwrap();
 }

@@ -93,7 +93,7 @@ fn expand_struct(
 
         // We only support named structs. darling validation will ensure this.
         let field_name = field.ident.clone().unwrap();
-        if field.subcommand {
+        if field.is_subcommand() {
             let span = field.ty.span();
             found_subcommand = true;
             // We assume that it's a CliRunnable as well.

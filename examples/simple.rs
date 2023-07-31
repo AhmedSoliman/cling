@@ -31,6 +31,7 @@ pub enum Commands {
     Calculator(Calculator),
     /// Hey this is the second command
     #[cling(run = "groot")]
+    #[command(name = "whoami")]
     WhoAmI,
 }
 
