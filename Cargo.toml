@@ -6,6 +6,8 @@ version = "0.0.0-alpha.2"
 edition = "2021"
 authors = ["Ahmed Farghal <me@asoli.dev>"]
 license = "Apache-2.0 OR MIT"
+rust-version = "1.64.0"  # MSRV
+repository = "https://github.com/AhmedSoliman/cling"
 
 
 [workspace.dependencies]

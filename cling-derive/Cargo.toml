@@ -1,9 +1,14 @@
 [package]
 name = "cling-derive"
+description = "Derive macro for cling. You should not use this crate directly, instead use cling."
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
+rust-version.workspace = true
 license.workspace = true
+repository.workspace = true
+categories = ["command-line-interface", "development-tools::procedural-macro-helpers"]
+keywords = ["clap", "cling", "cli", "parse", "derive", "proc_macro"]
 
 [lib]
 proc-macro = true
