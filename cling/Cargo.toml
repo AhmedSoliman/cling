@@ -5,8 +5,11 @@ edition.workspace = true
 version.workspace = true
 authors.workspace = true
 license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
 categories = ["command-line-interface"]
 include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
+readme = "../README.md"
 
 [dependencies]
 cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.2", optional = true }
