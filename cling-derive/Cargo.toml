@@ -4,9 +4,9 @@ description = "Derive macro for cling. You should not use this crate directly, i
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
-rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
+rust-version = "1.65.0"
 categories = ["command-line-interface", "development-tools::procedural-macro-helpers"]
 keywords = ["clap", "cli", "parse", "derive", "proc_macro"]
 
@@ -15,11 +15,11 @@ proc-macro = true
 bench = false
 
 [dependencies]
-proc-macro2 = "1"
-syn = { version = "2", features = ["extra-traits", "printing"] }
-quote = "1"
+proc-macro2 = "1.0"
+syn = { version = "2.0", features = ["extra-traits", "printing"] }
+quote = "1.0"
 darling = "0.20"
 
 [dev-dependencies]
-syn = { version = "2", features = ["extra-traits", "full", "parsing"] }
-pretty_assertions = "1"
+syn = { version = "2.0", features = ["extra-traits", "full", "parsing"] }
+pretty_assertions = "1.4"
