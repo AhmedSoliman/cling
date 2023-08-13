@@ -68,7 +68,7 @@ fn expand_struct(
         // We have a handler for this runnable, let's make sure we execute it.
         | Some(run) => {
             quote::quote_spanned! { span =>
-                cling::handler::CliHandler::call(#run, args).await?;
+                cling::handler::CliHandler::call(#run, args)?.into_result().await?;
             }
         }
         | None => quote::quote!(),
@@ -165,7 +165,7 @@ fn expand_enum(
                 | Some(run) => {
                     variant_tokens.push(quote::quote_spanned! { span =>
                         #enum_name::#variant_name => {
-                            cling::handler::CliHandler::call(#run, args).await?;
+                            cling::handler::CliHandler::call(#run, args)?.into_result().await?;
                         }
                     });
                 }

@@ -15,7 +15,6 @@ pub use ::clap;
 pub use async_trait::async_trait;
 /// A set of common imports you are likely to use.
 pub mod prelude {
-    //pub use clap::clap_derive::*;
     pub use clap::*;
     #[cfg(feature = "derive")]
     pub use cling_derive::*;

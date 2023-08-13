@@ -6,31 +6,51 @@ use indoc::formatdoc;
 use crate::args::{CliParam, CollectedArgs};
 use crate::prelude::CliError;
 
+pub struct _Sync;
+pub struct _Async;
+
 /// trait for functions that can be used to handle command line commands.
-#[async_trait::async_trait]
-pub trait CliHandler<'a, Input> {
-    async fn call(self, args: &'a mut CollectedArgs) -> Result<(), CliError>;
+pub trait CliHandler<'a, Type, Input, Output>
+where
+    Output: IntoCliResult<Type>,
+{
+    fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError>;
 }
 
 /// trait to handle function return types:
 /// - Result<(), E> where E: Into<CliError>
 /// - ()
-pub trait IntoCliResult {
-    fn into_result(self) -> Result<(), CliError>;
+#[async_trait::async_trait]
+pub trait IntoCliResult<Type> {
+    async fn into_result(self) -> Result<(), CliError>;
 }
 
-impl IntoCliResult for () {
-    fn into_result(self) -> Result<(), CliError> {
+#[async_trait::async_trait]
+impl IntoCliResult<_Sync> for () {
+    async fn into_result(self) -> Result<(), CliError> {
         Ok(())
     }
 }
 
-impl<E> IntoCliResult for Result<(), E>
+#[async_trait::async_trait]
+impl<E> IntoCliResult<_Sync> for Result<(), E>
 where
     E: Into<CliError>,
+    Self: Send,
 {
-    fn into_result(self) -> Result<(), CliError> {
+    async fn into_result(self) -> Result<(), CliError> {
         self.map_err(Into::into)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T, Output> IntoCliResult<_Async> for T
+where
+    T: Future<Output = Output> + Send,
+    Output: IntoCliResult<_Sync> + Send,
+{
+    async fn into_result(self) -> Result<(), CliError> {
+        self.await.into_result().await
     }
 }
 
@@ -39,15 +59,13 @@ where
 // 2. ()
 //
 // So type that implements trait IntoCliResult is accepted.
-#[async_trait::async_trait]
-impl<'a, F, Fut, Output> CliHandler<'a, ((),)> for F
+impl<'a, Type, F, Output> CliHandler<'a, Type, ((),), Output> for F
 where
-    F: FnOnce() -> Fut + Send,
-    Fut: Future<Output = Output> + Send,
-    Output: IntoCliResult,
+    F: FnOnce() -> Output + Send,
+    Output: IntoCliResult<Type>,
 {
-    async fn call(self, _args: &'a mut CollectedArgs) -> Result<(), CliError> {
-        self().await.into_result()
+    fn call(self, _args: &'a mut CollectedArgs) -> Result<Output, CliError> {
+        Ok(self())
     }
 }
 
@@ -55,15 +73,13 @@ macro_rules! handler_impl {
     ($($ty:ident),* $(,)?) => {
 
         #[allow(non_snake_case, unused_mut)]
-        #[async_trait::async_trait]
-        impl<'a, F, Fut, Output, $($ty),*> CliHandler<'a, (($($ty,)*),)> for F
+        impl<'a, Type, F, Output, $($ty),*> CliHandler<'a, Type, (($($ty,)*),), Output> for F
         where
-            F: FnOnce($($ty,)*) -> Fut + Send,
-            Fut: Future<Output = Output> + Send,
-            Output: IntoCliResult,
+            F: FnOnce($($ty,)*) -> Output + Send,
+            Output: IntoCliResult<Type>,
             $($ty: CliParam<'a> + Send),*
         {
-            async fn call(self, args: &'a mut CollectedArgs) -> Result<(), CliError> {
+            fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError> {
                 let handler_name = type_name::<Self>();
 
                 $(
@@ -82,7 +98,7 @@ macro_rules! handler_impl {
                          }));
                 };
                 )*
-                self($($ty),*).await.into_result()
+                Ok(self($($ty),*))
             }
         }
     };
@@ -118,11 +134,24 @@ const _: () = {
         }
     }
 
-    async fn handle<'a, X, T: CliHandler<'a, X>>(
+    async fn handle<
+        'a,
+        Type,
+        Output: IntoCliResult<Type>,
+        X,
+        T: CliHandler<'a, Type, X, Output>,
+    >(
         args: &'a mut CollectedArgs,
         handler: T,
     ) {
-        handler.call(args).await.unwrap();
+        handler.call(args).unwrap().into_result().await.unwrap();
+    }
+
+    async fn test_empty_sync_functions() {
+        // returns Unit.
+        fn noop() {}
+        let mut args = CollectedArgs::default();
+        handle(&mut args, noop).await;
     }
 
     async fn test_empty_functions() {

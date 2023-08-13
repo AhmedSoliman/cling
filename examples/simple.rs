@@ -120,9 +120,10 @@ pub async fn run_add(
     Ok(())
 }
 
+// Note that this is SYNC handler.
 // Fails in runtime, we expect AddOpts but this will never be collected in the
 // subtraction path.
-pub async fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
+pub fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
     println!("Never gets called!");
 }
 
