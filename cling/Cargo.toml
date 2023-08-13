@@ -15,8 +15,6 @@ readme = "../README.md"
 cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.3", optional = true }
 clap = { version = "4", features = ["env", "derive", "wrap_help"] }
 clap-stdin = { version = "0.2" }
-env_logger = "0.10"
-tracing = { workspace = true }
 thiserror = { workspace = true }
 static_assertions = { workspace = true }
 anyhow = { version = "1.0" }
