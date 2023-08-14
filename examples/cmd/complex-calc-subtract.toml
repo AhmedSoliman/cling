@@ -1,0 +1,27 @@
+bin.name = "complex"
+args = ["calculator", "subtract", "10", "2"]
+status.code = 1
+stdout = """
+>> Hello world! CommonOpts { debug: 0 }, color: None, database: Database { _data: \"Loads of data\" }
+>> Calculator: Calculator { color: false, operation: Subtract(SubtractOpts { num1: 10, num2: 2 }) }
+"""
+stderr = """
+\u001B[0m\u001B[1m\u001B[31m
+
+** Cling Handler Design Error **
+
+\u001B[0mIn `complex::run_subtract`: Type `&complex::AddOpts` was not collected from input arguments. Possible reasons:
+   - The type doesn't implement `CliParam` (add derive(CliParam))
+   - The type is not a field in any type leading to this command
+   - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
+   
+   Those are the types that have been collected: [
+    \"cling::extractors::State<complex::Database>\",
+    \"complex::Calculator\",
+    \"complex::CliOpts\",
+    \"complex::CommonOpts\",
+    \"core::option::Option<alloc::vec::Vec<complex::Colors>>\",
+]
+   
+"""
+

@@ -1,0 +1,20 @@
+bin.name = "multi-level-sync"
+args = []
+status.code = 1
+stdout = ""
+stderr = """
+[WIP] An opinionated Rust framework for building multi-level command-line applications on top of
+clap.rs
+
+Usage: multi-level-sync [OPTIONS] <COMMAND>
+
+Commands:
+  honk  
+  beep  
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Turn debugging information on
+  -h, --help        Print help
+  -V, --version     Print version
+"""

@@ -84,6 +84,8 @@ macro_rules! handler_impl {
 
                 $(
                 let Some($ty) = $ty::from_args(args) else {
+                    let mut collected = args.collected_types();
+                    collected.sort();
                     return Err(CliError::InvalidHandler(formatdoc!{"
                         In `{handler_name}`: Type `{}` was not collected from input arguments. Possible reasons:
                            - The type doesn't implement `CliParam` (add derive(CliParam))
@@ -92,9 +94,9 @@ macro_rules! handler_impl {
                            
                            Those are the types that have been collected: {:#?}
                            "
-                         , type_name::<$ty>(),
-                         args.collected_types()
-
+                         ,
+                             type_name::<$ty>(),
+                             collected,
                          }));
                 };
                 )*

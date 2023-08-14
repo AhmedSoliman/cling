@@ -27,9 +27,9 @@ pub enum Colors {
 
 #[derive(CliRunnable, Subcommand, Debug, Clone)]
 pub enum Commands {
-    /// A handy calculator
+    /// Calculate things
     Calculator(Calculator),
-    /// Hey this is the second command
+    /// What's my name?
     #[cling(run = "groot")]
     #[command(name = "whoami")]
     WhoAmI,
@@ -95,7 +95,8 @@ async fn init(
     );
 }
 
-async fn groot() {
+// Note that handlers can be sync as well.
+fn groot() {
     println!("I'm groot!");
 }
 
