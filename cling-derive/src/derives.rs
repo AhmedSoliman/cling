@@ -215,7 +215,7 @@ fn gen_runnable_impl(
     quote::quote! {
         #[automatically_derived]
         #[allow(clippy::all)]
-        #[::cling::async_trait]
+        #[::cling::prelude::async_trait]
         impl #generics ::cling::prelude::CliRunnable for #name #generics {
             async fn call(
                 &self,
