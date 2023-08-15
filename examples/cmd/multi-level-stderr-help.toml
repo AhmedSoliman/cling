@@ -3,10 +3,9 @@ args = []
 status.code = 1
 stdout = ""
 stderr = """
-[WIP] An opinionated Rust framework for building multi-level command-line applications on top of
-clap.rs
+An opinionated Rust framework for building multi-level command-line applications on top of clap.rs
 
-Usage: multi-level-sync [OPTIONS] <COMMAND>
+Usage: multi-level-sync[EXE] [OPTIONS] <COMMAND>
 
 Commands:
   honk  

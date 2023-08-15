@@ -6,7 +6,7 @@ stderr = """
 error: the following required arguments were not provided:
   <TIMES>
 
-Usage: multi-level-sync honk <TIMES>
+Usage: multi-level-sync[EXE] honk <TIMES>
 
 For more information, try '--help'.
 """
