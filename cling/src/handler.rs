@@ -6,7 +6,9 @@ use indoc::formatdoc;
 use crate::args::{CliParam, CollectedArgs};
 use crate::prelude::CliError;
 
+// Internal struct, not meant for public use.
 pub struct _Sync;
+// Internal struct, not meant for public use.
 pub struct _Async;
 
 /// trait for functions that can be used to handle command line commands.
@@ -18,8 +20,8 @@ where
 }
 
 /// trait to handle function return types:
-/// - Result<(), E> where E: Into<CliError>
-/// - ()
+/// - `Result<(), E> where E: Into<CliError>`
+/// - `()`
 #[async_trait::async_trait]
 pub trait IntoCliResult<Type> {
     async fn into_result(self) -> Result<(), CliError>;
@@ -91,7 +93,7 @@ macro_rules! handler_impl {
                            - The type doesn't implement `CliParam` (add derive(CliParam))
                            - The type is not a field in any type leading to this command
                            - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
-                           
+
                            Those are the types that have been collected: {:#?}
                            "
                          ,

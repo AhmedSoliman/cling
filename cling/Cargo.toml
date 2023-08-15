@@ -12,7 +12,7 @@ include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
 readme = "../README.md"
 
 [dependencies]
-cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.3", optional = true }
+cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.4", optional = true }
 clap = { version = "4", features = ["env", "derive", "wrap_help"] }
 clap-stdin = { version = "0.2" }
 thiserror = { workspace = true }
@@ -25,8 +25,10 @@ termcolor = { version = "1.2" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
-trybuild = { version = "1.0" }
+trybuild = { version = "1.0.82" }
 trycmd = { version = "0.14.16", features = ["examples"] }
+# Only needed to fix an incorrect min version set in trycmd
+filetime = { version = "0.2.22" }
 
 [features]
 default = ["derive"]
@@ -35,6 +37,10 @@ derive = ["dep:cling-derive"]
 [[example]]
 name = "complex"
 path = "../examples/complex.rs"
+
+[[example]]
+name = "simple"
+path = "../examples/simple.rs"
 
 [[example]]
 name = "multi-level-sync"

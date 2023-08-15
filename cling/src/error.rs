@@ -1,11 +1,13 @@
 use std::io::Write;
 
+use clap::CommandFactory;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 use thiserror::Error;
 
 pub trait CliErrorHandler {
-    fn print_err_and_exit(self);
-    fn print_err(self);
+    type Output;
+    fn unwrap_or_exit(self) -> Self::Output;
+    fn then_exit(self) -> !;
 }
 
 #[derive(Error, Debug)]
@@ -26,45 +28,52 @@ impl<T, E> CliErrorHandler for Result<T, E>
 where
     E: Into<CliError>,
 {
-    fn print_err_and_exit(self) {
+    type Output = T;
+
+    fn unwrap_or_exit(self) -> T {
         match self {
-            | Ok(_) => {}
-            | Err(_) => {
-                self.print_err();
+            | Ok(x) => x,
+            | Err(e) => {
+                print_err(e);
                 std::process::exit(1);
             }
-        };
+        }
     }
 
-    fn print_err(self) {
+    fn then_exit(self) -> ! {
         match self {
-            | Ok(_) => {}
+            | Ok(_) => std::process::exit(0),
             | Err(e) => {
-                let cli_error: CliError = e.into();
-                match cli_error {
-                    | CliError::ClapError(e) => {
-                        // Clap handles colors
-                        e.print().unwrap();
-                    }
-                    | CliError::Abort => {
-                        print_formatted_error("Aborted!", "".to_owned());
-                    }
-                    | CliError::AbortMessage(e) => {
-                        print_formatted_error("", format!("{}", e));
-                    }
-                    | CliError::Other(e) => {
-                        print_formatted_error("Error: ", format!("{}", e));
-                    }
-                    | CliError::InvalidHandler(msg) => {
-                        print_formatted_error(
-                            "\n\n** Cling Handler Design Error **\n\n",
-                            msg,
-                        );
-                    }
-                };
+                print_err(e);
+                std::process::exit(1)
             }
-        };
+        }
     }
+}
+
+fn print_err<E: Into<CliError>>(err: E) {
+    let cli_error: CliError = err.into();
+    match cli_error {
+        | CliError::ClapError(e) => {
+            // Clap handles colors
+            e.print().unwrap();
+        }
+        | CliError::Abort => {
+            print_formatted_error("Aborted!", "".to_owned());
+        }
+        | CliError::AbortMessage(e) => {
+            print_formatted_error("", e.to_string());
+        }
+        | CliError::Other(e) => {
+            print_formatted_error("Error: ", e.to_string());
+        }
+        | CliError::InvalidHandler(msg) => {
+            print_formatted_error(
+                "\n\n** Cling Handler Design Error **\n\n",
+                msg,
+            );
+        }
+    };
 }
 
 fn print_formatted_error(heading: &str, msg: String) {
@@ -76,4 +85,11 @@ fn print_formatted_error(heading: &str, msg: String) {
     write!(&mut stderr, "{}", heading).unwrap();
     stderr.reset().unwrap();
     writeln!(&mut stderr, "{}", msg).unwrap();
+}
+
+pub(crate) fn format_clap_error<I: CommandFactory>(
+    err: clap::Error,
+) -> clap::Error {
+    let mut cmd = I::command();
+    err.format(&mut cmd)
 }
