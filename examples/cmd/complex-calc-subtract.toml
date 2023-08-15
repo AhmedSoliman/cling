@@ -14,7 +14,7 @@ stderr = """
    - The type doesn't implement `CliParam` (add derive(CliParam))
    - The type is not a field in any type leading to this command
    - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
-   
+
    Those are the types that have been collected: [
     \"cling::extractors::State<complex::Database>\",
     \"complex::Calculator\",

@@ -50,5 +50,6 @@ fn beep() {
 
 #[tokio::main]
 async fn main() {
-    Cling::<MyApp>::run().await.print_err_and_exit();
+    Cling::<MyApp>::default_run_and_exit().await;
+    println!("Hello World");
 }
