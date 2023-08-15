@@ -12,7 +12,7 @@ include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
 readme = "../README.md"
 
 [dependencies]
-cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.3", optional = true }
+cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.4", optional = true }
 clap = { version = "4", features = ["env", "derive", "wrap_help"] }
 clap-stdin = { version = "0.2" }
 thiserror = { workspace = true }
@@ -35,6 +35,10 @@ derive = ["dep:cling-derive"]
 [[example]]
 name = "complex"
 path = "../examples/complex.rs"
+
+[[example]]
+name = "simple"
+path = "../examples/simple.rs"
 
 [[example]]
 name = "multi-level-sync"
