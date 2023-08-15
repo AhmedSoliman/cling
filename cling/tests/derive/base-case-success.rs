@@ -15,8 +15,6 @@ pub async fn run() {
 
 #[tokio::main]
 async fn main() {
-    Cling::<Options>::run().await.print_err_and_exit();
-    // or
     let options = Options::parse();
-    let _ = options.run().await.print_err_and_exit();
+    options.run_and_exit().await;
 }

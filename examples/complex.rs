@@ -1,4 +1,3 @@
-use cling::error::CliErrorHandler;
 use cling::prelude::*;
 use colored::Colorize;
 use static_assertions::assert_impl_all;
@@ -128,14 +127,13 @@ pub fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
     println!("Never gets called!");
 }
 
-assert_impl_all!(CliOpts: CliApp, cling::clap::Parser, Send, Sync, CliRunnable);
+assert_impl_all!(CliOpts: ClapClingExt, cling::prelude::Parser, Send, Sync, CliRunnable);
 
 #[tokio::main]
 async fn main() {
     let database = Database {
         _data: "Loads of data".to_owned(),
     };
-    Cling::<CliOpts>::run_with_state(database)
-        .await
-        .print_err_and_exit();
+    let opts = CliOpts::parse();
+    opts.run_with_state_and_exit(database).await;
 }
