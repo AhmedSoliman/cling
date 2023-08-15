@@ -72,3 +72,6 @@ Opts: Options { debug: 2 }
     * Translates Result::Err to non-zero exit codes
     * Support for building REPLs
     * Do we want to support non-derive clap as well? No!
+
+# Minimum Supported Rust Version (MSRV)
+Cling's MSRV is 1.65.0.
