@@ -53,8 +53,8 @@ async fn handle<
     handler.call(args)?.into_result().await
 }
 
-#[tokio::main]
-async fn main() -> CliResult {
+#[tokio::test]
+async fn handler_tests() -> CliResult {
     let mut args = CollectedArgs::default();
     args.insert(CommonOpts);
     args.insert(NotSoCommonOpts);

@@ -6,7 +6,9 @@ use indoc::formatdoc;
 use crate::args::{CliParam, CollectedArgs};
 use crate::prelude::CliError;
 
+// Internal struct, not meant for public use.
 pub struct _Sync;
+// Internal struct, not meant for public use.
 pub struct _Async;
 
 /// trait for functions that can be used to handle command line commands.
@@ -18,8 +20,8 @@ where
 }
 
 /// trait to handle function return types:
-/// - Result<(), E> where E: Into<CliError>
-/// - ()
+/// - `Result<(), E> where E: Into<CliError>`
+/// - `()`
 #[async_trait::async_trait]
 pub trait IntoCliResult<Type> {
     async fn into_result(self) -> Result<(), CliError>;
@@ -84,17 +86,19 @@ macro_rules! handler_impl {
 
                 $(
                 let Some($ty) = $ty::from_args(args) else {
+                    let mut collected = args.collected_types();
+                    collected.sort();
                     return Err(CliError::InvalidHandler(formatdoc!{"
                         In `{handler_name}`: Type `{}` was not collected from input arguments. Possible reasons:
                            - The type doesn't implement `CliParam` (add derive(CliParam))
                            - The type is not a field in any type leading to this command
                            - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
-                           
+
                            Those are the types that have been collected: {:#?}
                            "
-                         , type_name::<$ty>(),
-                         args.collected_types()
-
+                         ,
+                             type_name::<$ty>(),
+                             collected,
                          }));
                 };
                 )*

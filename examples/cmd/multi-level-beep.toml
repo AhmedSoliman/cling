@@ -1,0 +1,7 @@
+bin.name = "multi-level-sync"
+args = ["beep"]
+status.code = 0
+stdout = """
+Beep, Beep!
+"""
+stderr = ""
