@@ -1,21 +1,53 @@
 #![forbid(unsafe_code)]
+//! # Cling
+//!
+//! Cling is a library that makes it easy to write command line applications in
+//! Rust.
 
 mod anymap;
 mod app;
 pub mod args;
 mod command;
-pub mod error;
+mod error;
 mod extractors;
 pub mod handler;
 
-pub use static_assertions::assert_impl_all;
+pub use app::{ClapClingExt, Cling};
+pub use args::CliParam;
+pub use command::CliRunnable;
+pub use error::{CliError, CliErrorHandler};
+pub use extractors::State;
+pub use handler::IntoCliResult;
 
+/// Convenience type alias for the result type of CLI applications
 pub type CliResult = Result<(), error::CliError>;
-pub use ::clap;
-pub use async_trait::async_trait;
-/// A set of common imports you are likely to use.
+
+/// Prelude module that contains most imports you'll need
+///
+/// This also imports clap, the following is a common pattern:
+/// ```rust
+/// use cling::prelude::*;
+///
+/// #[derive(CliRunnable, Parser, Debug, Clone)]
+/// #[cling(run = "run")]
+/// pub struct App {
+///     /// Turn debugging information on
+///     #[arg(short, long, action = ArgAction::Count)]
+///     pub debug: u8,
+/// }
+///
+/// pub async fn run() {
+///     println!("Hello, world!");
+/// }
+///
+/// #[tokio::main]
+/// async fn main() {
+///     let app = App::parse();
+///     app.run_and_exit().await;
+/// }
+/// ```
 pub mod prelude {
-    //pub use clap::clap_derive::*;
+    pub use async_trait::async_trait;
     pub use clap::*;
     #[cfg(feature = "derive")]
     pub use cling_derive::*;

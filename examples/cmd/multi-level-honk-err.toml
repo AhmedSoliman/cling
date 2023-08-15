@@ -1,0 +1,12 @@
+bin.name = "multi-level-sync"
+args = ["honk"]
+status.code = 1
+stdout = ""
+stderr = """
+error: the following required arguments were not provided:
+  <TIMES>
+
+Usage: multi-level-sync honk <TIMES>
+
+For more information, try '--help'.
+"""

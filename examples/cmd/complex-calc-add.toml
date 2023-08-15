@@ -1,0 +1,11 @@
+bin.name = "complex"
+args = ["calculator", "--color", "add", "1", "2"]
+status.code = 0
+stdout = """
+>> Hello world! CommonOpts { debug: 0 }, color: None, database: Database { _data: \"Loads of data\" }
+>> Calculator: Calculator { color: true, operation: Add(AddOpts { num1: 1, num2: 2 }) }
+1 + 2 = 3
+"""
+stderr = ""
+
+
