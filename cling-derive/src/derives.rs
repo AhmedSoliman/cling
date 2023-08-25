@@ -37,8 +37,8 @@ pub fn derive_cli_param(input: &DeriveInput) -> TokenStream {
 
 fn gen_from_cli_param_impl(name: &Ident) -> TokenStream {
     quote::quote! {
-        impl<'a> cling::args::CliParam<'a> for #name {
-            fn from_args(args: &'a cling::args::CollectedArgs) -> core::option::Option<Self> {
+        impl<'a> cling::_private::CliParam<'a> for #name {
+            fn extract_param(args: &'a cling::_private::CollectedParams) -> core::option::Option<Self> {
                 args.get::<Self>().cloned()
             }
         }
@@ -68,21 +68,21 @@ fn expand_struct(
         // We have a handler for this runnable, let's make sure we execute it.
         | Some(run) => {
             quote::quote_spanned! { span =>
-                cling::handler::CliHandler::call(#run, args)?.into_result().await?;
+                cling::_private::CliHandler::call(#run, args)?.into_result().await?;
             }
         }
         | None => quote::quote!(),
     };
 
-    // collect _Collectable_ fields in CollectedArgs
+    // collect _Collectable_ fields in CollectedParams
     let mut collect_arguments = TokenStream::new();
     let mut subcommand_runs = TokenStream::new();
     let mut found_subcommand = false;
     // We collect our own object in all cases.
     collect_arguments.extend(quote::quote! {
-        if (self).as_collectable().can_collect() {
-            args.insert(self.clone());
-        }
+         if (self).as_collectable().can_collect() {
+             args.insert(self.clone());
+         }
     });
     for field in &fields.fields {
         if found_subcommand {
@@ -165,15 +165,18 @@ fn expand_enum(
                 | Some(run) => {
                     variant_tokens.push(quote::quote_spanned! { span =>
                         #enum_name::#variant_name => {
-                            cling::handler::CliHandler::call(#run, args)?.into_result().await?;
+                            cling::_private::CliHandler::call(#run, args)?.into_result().await?;
                         }
                     });
                 }
                 | None => {
-                    acc.push(Error::custom(
-                        "Unit enum variants must have a #[cling(run = ...)] \
-                         attribute",
-                    ));
+                    acc.push(
+                        Error::custom(
+                            "Unit enum variants must have a #[cling(run = \
+                             ...)] attribute",
+                        )
+                        .with_span(&variant.ident),
+                    )
                 }
             }
         } else if variant.run.is_some() {
@@ -219,14 +222,14 @@ fn gen_runnable_impl(
         impl #generics ::cling::prelude::CliRunnable for #name #generics {
             async fn call(
                 &self,
-                args: &mut cling::args::CollectedArgs,
+                args: &mut cling::_private::CollectedParams,
             ) -> std::result::Result<(), cling::prelude::CliError> {
-                use cling::args::{CollectableKind, CollectedArgs, UnknownKind};
-                use cling::handler::*;
+                use cling::_private::*;
 
                 #impl_body
                 Ok(())
             }
         }
+        ::cling::static_assertions::assert_impl_all!(#name #generics: Clone);
     }
 }

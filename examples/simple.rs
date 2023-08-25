@@ -1,9 +1,10 @@
+use anyhow::bail;
 use cling::prelude::*;
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
 #[cling(run = "run")]
 pub struct App {
-    #[command(flatten)]
+    #[clap(flatten)]
     pub options: Options,
 }
 
@@ -17,12 +18,18 @@ pub struct Options {
 }
 
 // handlers can be sync or async, cling will handle this transparently.
-pub async fn run(options: &Options) {
+async fn run(options: &Options) -> Result<(), anyhow::Error> {
     println!("Opts: {options:?}");
+    if options.debug > 3 {
+        bail!("Too much debugging");
+    }
+    Ok(())
 }
 
 #[tokio::main]
-async fn main() {
-    let app = App::parse();
-    app.run_and_exit().await;
+async fn main() -> ClingFinished<App> {
+    // Cling::parse().run().await
+    // Or, return ClingFinished<T> to let cling handle error printing and exit
+    // code in a more convenient way.
+    Cling::parse_and_run().await
 }

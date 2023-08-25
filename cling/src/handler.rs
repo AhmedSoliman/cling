@@ -3,7 +3,7 @@ use std::future::Future;
 
 use indoc::formatdoc;
 
-use crate::args::{CliParam, CollectedArgs};
+use crate::params::{CliParam, CollectedParams};
 use crate::prelude::CliError;
 
 // Internal struct, not meant for public use.
@@ -16,7 +16,7 @@ pub trait CliHandler<'a, Type, Input, Output>
 where
     Output: IntoCliResult<Type>,
 {
-    fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError>;
+    fn call(self, args: &'a mut CollectedParams) -> Result<Output, CliError>;
 }
 
 /// trait to handle function return types:
@@ -66,7 +66,7 @@ where
     F: FnOnce() -> Output + Send,
     Output: IntoCliResult<Type>,
 {
-    fn call(self, _args: &'a mut CollectedArgs) -> Result<Output, CliError> {
+    fn call(self, _args: &'a mut CollectedParams) -> Result<Output, CliError> {
         Ok(self())
     }
 }
@@ -81,11 +81,11 @@ macro_rules! handler_impl {
             Output: IntoCliResult<Type>,
             $($ty: CliParam<'a> + Send),*
         {
-            fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError> {
+            fn call(self, args: &'a mut CollectedParams) -> Result<Output, CliError> {
                 let handler_name = type_name::<Self>();
 
                 $(
-                let Some($ty) = $ty::from_args(args) else {
+                let Some($ty) = $ty::extract_param(args) else {
                     let mut collected = args.collected_types();
                     collected.sort();
                     return Err(CliError::InvalidHandler(formatdoc!{"
@@ -133,7 +133,7 @@ const _: () = {
     struct CommonOpts;
 
     impl<'a> CliParam<'a> for CommonOpts {
-        fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+        fn extract_param(args: &'a CollectedParams) -> Option<Self> {
             args.get::<Self>().cloned()
         }
     }
@@ -145,7 +145,7 @@ const _: () = {
         X,
         T: CliHandler<'a, Type, X, Output>,
     >(
-        args: &'a mut CollectedArgs,
+        args: &'a mut CollectedParams,
         handler: T,
     ) {
         handler.call(args).unwrap().into_result().await.unwrap();
@@ -154,14 +154,14 @@ const _: () = {
     async fn test_empty_sync_functions() {
         // returns Unit.
         fn noop() {}
-        let mut args = CollectedArgs::default();
+        let mut args = CollectedParams::default();
         handle(&mut args, noop).await;
     }
 
     async fn test_empty_functions() {
         // returns Unit.
         async fn noop() {}
-        let mut args = CollectedArgs::default();
+        let mut args = CollectedParams::default();
         handle(&mut args, noop).await;
     }
 
@@ -169,7 +169,7 @@ const _: () = {
         async fn noop() -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedArgs::default();
+        let mut args = CollectedParams::default();
         handle(&mut args, noop).await;
     }
 
@@ -177,7 +177,7 @@ const _: () = {
         async fn noop(_opts: CommonOpts) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedArgs::default();
+        let mut args = CollectedParams::default();
         handle(&mut args, noop).await;
     }
 
@@ -186,7 +186,7 @@ const _: () = {
         async fn noop(_opts: &CommonOpts) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedArgs::default();
+        let mut args = CollectedParams::default();
         handle(&mut args, noop).await;
     }
 };

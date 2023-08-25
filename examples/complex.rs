@@ -130,10 +130,9 @@ pub fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
 assert_impl_all!(CliOpts: ClapClingExt, cling::prelude::Parser, Send, Sync, CliRunnable);
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ClingFinished<CliOpts> {
     let database = Database {
         _data: "Loads of data".to_owned(),
     };
-    let opts = CliOpts::parse();
-    opts.run_with_state_and_exit(database).await;
+    Cling::parse().run_with_state(database).await
 }

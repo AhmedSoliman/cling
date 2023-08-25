@@ -57,7 +57,7 @@ impl AnyMap {
     /// Inserts a value into the collected arguments. If the value already
     /// exists, it will be returned.
     pub fn insert<T: Send + Sync + 'static>(&mut self, val: T) -> Option<T> {
-        self.known_types.insert(type_name::<T>().to_owned());
+        self.known_types.insert(type_name::<T>().to_string());
         self.map
             .insert(TypeId::of::<T>(), Box::new(val))
             .and_then(|boxed| {

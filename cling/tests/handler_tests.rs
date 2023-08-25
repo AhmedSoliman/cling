@@ -1,5 +1,4 @@
-use cling::args::{CliParam, CollectedArgs};
-use cling::handler::IntoCliResult;
+use cling::_private::{CliParam, CollectedParams, IntoCliResult};
 use cling::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -9,13 +8,13 @@ struct CommonOpts;
 struct NotSoCommonOpts;
 
 impl<'a> CliParam<'a> for CommonOpts {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         args.get::<Self>().cloned()
     }
 }
 
 impl<'a> CliParam<'a> for NotSoCommonOpts {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         args.get::<Self>().cloned()
     }
 }
@@ -47,15 +46,15 @@ async fn handle<
     X,
     T: CliHandler<'a, Type, X, Output>,
 >(
-    args: &'a mut CollectedArgs,
+    args: &'a mut CollectedParams,
     handler: T,
-) -> CliResult {
+) -> Result<(), CliError> {
     handler.call(args)?.into_result().await
 }
 
 #[tokio::test]
-async fn handler_tests() -> CliResult {
-    let mut args = CollectedArgs::default();
+async fn handler_tests() -> Result<(), CliError> {
+    let mut args = CollectedParams::default();
     args.insert(CommonOpts);
     args.insert(NotSoCommonOpts);
 

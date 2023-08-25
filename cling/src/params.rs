@@ -26,8 +26,10 @@ pub trait CollectableKind {
 }
 
 // Does not require autoref is called with &(arg).collectable()
-impl<T> CollectableKind for T where T: for<'a> CliParam<'a> + Clone + Send + Sync
-{}
+impl<T> CollectableKind for T where
+    T: for<'a> CliParam<'a> + Clone + Send + Sync + ?Sized
+{
+}
 
 pub trait UnknownKind {
     fn as_collectable(&self) -> Uncollectable {
@@ -38,8 +40,9 @@ pub trait UnknownKind {
 // Note the type &T here, this means that it's lower priority.
 impl<T> UnknownKind for &T {}
 
+#[doc(hidden)]
 pub trait CliParam<'a>: Sized {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self>;
+    fn extract_param(args: &'a CollectedParams) -> Option<Self>;
 }
 
 // implementation is per type that derives CliParam
@@ -47,7 +50,7 @@ pub trait CliParam<'a>: Sized {
 // where
 //     T: Parser + Send + Sync + Clone + 'static,
 // {
-//     fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+//     fn extract_param(args: &'a CollectedParams) -> Option<Self> {
 //         args.get::<Self>().cloned()
 //     }
 // }
@@ -58,7 +61,7 @@ where
     T: Sync + Send + 'static,
     T: CliParam<'a> + 'static,
 {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         args.get::<T>()
     }
 }
@@ -69,7 +72,7 @@ where
     T: CliParam<'a> + 'static,
     Vec<T>: Clone,
 {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         args.get::<Vec<T>>().cloned()
     }
 }
@@ -80,7 +83,7 @@ where
     T: CliParam<'a> + 'static,
     Option<T>: Clone,
 {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         args.get::<Option<T>>().cloned()
     }
 }
@@ -91,14 +94,14 @@ where
 /// environment, context, or other global states that were injected by upper
 /// layers.
 #[derive(Default)]
-pub struct CollectedArgs {
+pub struct CollectedParams {
     map: Option<AnyMap>,
 }
 
-impl CollectedArgs {
+impl CollectedParams {
     #[inline]
     pub fn new() -> Self {
-        CollectedArgs { map: None }
+        CollectedParams { map: None }
     }
 
     pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {

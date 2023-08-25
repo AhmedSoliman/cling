@@ -1,4 +1,4 @@
-use crate::args::{CliParam, CollectedArgs};
+use crate::params::{CliParam, CollectedParams};
 
 /// Extractor for state in handlers
 ///
@@ -37,7 +37,7 @@ impl<'a, S> CliParam<'a> for State<S>
 where
     S: Send + Sync + Clone + 'static,
 {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
         let Some(state) = args.get::<State<S>>() else {
             return None;
         };

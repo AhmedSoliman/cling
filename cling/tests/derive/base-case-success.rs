@@ -16,5 +16,5 @@ pub async fn run() {
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    options.run_and_exit().await;
+    options.into_cling().run_and_exit().await;
 }

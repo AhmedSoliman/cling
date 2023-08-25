@@ -1,6 +1,6 @@
 bin.name = "multi-level-sync"
 args = ["honk"]
-status.code = 1
+status.code = 2
 stdout = ""
 stderr = """
 error: the following required arguments were not provided:

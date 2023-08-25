@@ -22,6 +22,7 @@ colored = { version = "2.0" }
 async-trait = { version = "0.1.65" }
 indoc = { version = "2.0" }
 termcolor = { version = "1.2" }
+shlex = { version = "1.1.0" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -29,6 +30,9 @@ trybuild = { version = "1.0.82" }
 trycmd = { version = "0.14.16", features = ["examples"] }
 # Only needed to fix an incorrect min version set in trycmd
 filetime = { version = "0.2.22" }
+# For examples
+rand = { version = "0.8.5" }
+rustyline = { version = "12.0.0" }
 
 [features]
 default = ["derive"]
@@ -38,6 +42,7 @@ derive = ["dep:cling-derive"]
 name = "complex"
 path = "../examples/complex.rs"
 
+
 [[example]]
 name = "simple"
 path = "../examples/simple.rs"
@@ -45,3 +50,7 @@ path = "../examples/simple.rs"
 [[example]]
 name = "multi-level-sync"
 path = "../examples/multi-level-sync.rs"
+
+[[example]]
+name = "repl"
+path = "../examples/repl.rs"
