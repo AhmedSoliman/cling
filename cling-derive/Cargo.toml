@@ -6,7 +6,7 @@ version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-rust-version = "1.65.0"
+rust-version = "1.70.0"
 categories = ["command-line-interface", "development-tools::procedural-macro-helpers"]
 keywords = ["clap", "cli", "parse", "derive", "proc_macro"]
 

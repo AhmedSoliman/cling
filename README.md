@@ -74,4 +74,4 @@ Opts: Options { debug: 2 }
     * Do we want to support non-derive clap as well? No!
 
 # Minimum Supported Rust Version (MSRV)
-Cling's MSRV is 1.65.0.
+Cling's MSRV is 1.70.0.

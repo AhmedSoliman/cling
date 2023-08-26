@@ -442,4 +442,3 @@ impl<T: CliRunnable + Parser> From<CliError> for ClingFinished<T> {
         Cling::failed(value)
     }
 }
-

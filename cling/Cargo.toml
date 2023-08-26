@@ -6,20 +6,20 @@ version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-rust-version = "1.65.0"
+rust-version = "1.70.0"
 categories = ["command-line-interface"]
 include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
 readme = "../README.md"
 
 [dependencies]
-cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.5", optional = true }
+cling-derive = { path = "../cling-derive", version = "0.0.1-alpha.1", optional = true }
 clap = { version = "4.3.21", features = ["env", "derive", "wrap_help"] }
 clap-stdin = { version = "0.2.1" }
 thiserror = { workspace = true }
 static_assertions = { workspace = true }
 anyhow = { version = "1.0" }
 colored = { version = "2.0" }
-async-trait = { version = "0.1.65" }
+async-trait = { version = "0.1.70" }
 indoc = { version = "2.0" }
 termcolor = { version = "1.2" }
 shlex = { version = "1.1.0" }
