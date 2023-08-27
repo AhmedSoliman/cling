@@ -222,6 +222,7 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
     /// Example input string: `sub-command --debug=2`. Note that the input
     /// **must omit** the CLI binary name, otherwise clap parsing will
     /// fail.
+    #[cfg(feature = "shlex")]
     pub fn try_parse_str(input: &str) -> Result<ClingReady<T>, CliError> {
         // binary name
         let bin_name = std::env::current_exe()
@@ -232,6 +233,7 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
         Self::try_parse_str_with_bin_name(&bin_name, input)
     }
 
+    #[cfg(feature = "shlex")]
     pub fn try_parse_str_with_bin_name(
         bin_name: &str,
         input: &str,
