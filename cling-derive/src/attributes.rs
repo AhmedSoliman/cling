@@ -25,11 +25,13 @@ pub(crate) struct StructFieldAttrs {
     pub ty: syn::Type,
 
     #[darling(default)]
-    #[allow(unused)]
-    pub flatten: bool,
+    pub collect: bool,
 
-    // #[darling(default)]
-    // pub subcommand: bool,
+    // Escape hatch if our logic for collectable went wrong (fails to compile)
+    // and the user wants to force-ignore processing a certain field.
+    #[darling(default)]
+    pub skip: bool,
+
     pub attrs: Vec<syn::Attribute>,
 }
 

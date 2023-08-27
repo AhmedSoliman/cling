@@ -91,6 +91,7 @@ macro_rules! handler_impl {
                     return Err(CliError::InvalidHandler(formatdoc!{"
                         In `{handler_name}`: Type `{}` was not collected from input arguments. Possible reasons:
                            - The type doesn't implement `CliParam` (add derive(CliParam))
+                           - The struct field wasn't marked with `#[cling(collect)]`
                            - The type is not a field in any type leading to this command
                            - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
 

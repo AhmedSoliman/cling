@@ -1,0 +1,18 @@
+bin.name = "bad-practice"
+args = ["--name=asoli", "--city=London"]
+status.code = 0
+stdout = """
+Your name is: London and you are in London!
+This is definitely the wrong result. This is because we `#[cling(collect)]`ed the same type 'String' twice, the last collected will always win. 
+
+Run with `RUST_LOG=warn` to see the warning the cling generates, or `RUST_LOG=trace` to see details when params are collected.
+"""
+stderr = """
+[[..] DEBUG cling] Collecting type `String` from `App.name` because it's marked with `#[cling(collect)]`. This can be extracted with cling::prelude::Collected<T> at runtime.
+[[..] DEBUG cling] Collecting type `String` from `App.city` because it's marked with `#[cling(collect)]`. This can be extracted with cling::prelude::Collected<T> at runtime.
+[[..] WARN  cling::params] Collected the same type cling::extractors::Collected<alloc::string::String> twice while aggregating parameters. This is usually a sign of a bug in the code. Either two struct fields in the hierarchy of this command derive `CliParam` or a field (or more) of the same type is annotated with `#[cling(collect)].`
+[[..] DEBUG cling] Running handler `run` of type `App`
+"""
+
+[env.add]
+RUST_LOG = "trace"

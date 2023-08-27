@@ -83,8 +83,9 @@ pub struct Cling<T, S = Build> {
 }
 
 /// Holds configuration for cling framework.
+#[allow(dead_code)]
 #[derive(Default, Clone)]
-pub struct Environment {}
+struct Environment {}
 
 enum ClingInner<T> {
     Ready {
@@ -144,11 +145,16 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
         }
     }
 
-    pub fn with_env(self, env: Environment) -> ClingReady<T> {
+    /// [Provisional]
+    #[allow(dead_code)]
+    fn with_env(parsed: T, env: Environment) -> ClingReady<T> {
         ClingReady {
             env,
             _status: PhantomData,
-            inner: self.inner,
+            inner: ClingInner::Ready {
+                parsed,
+                collected_params: CollectedParams::new(),
+            },
         }
     }
 

@@ -114,8 +114,21 @@ impl CollectedParams {
 
     /// Inserts a value into the collected arguments. If the value already
     /// exists, it will be returned.
-    pub fn insert<T: Send + Sync + 'static>(&mut self, val: T) -> Option<T> {
-        self.map.get_or_insert_with(Default::default).insert(val)
+    pub fn insert<T: Send + Sync + 'static>(&mut self, val: T) {
+        let res = self.map.get_or_insert_with(Default::default).insert(val);
+        if res.is_some() {
+            // We have collected the same type twice, we overwrite with the
+            // newest value but we must inform the user/dev about it
+            // to avoid confusion.
+            ::tracing::log::warn!(
+                "Collected the same type {} twice while aggregating \
+                 parameters. This is usually a sign of a bug in the code. \
+                 Either two struct fields in the hierarchy of this command \
+                 derive `CliParam` or a field (or more) of the same type is \
+                 annotated with `#[cling(collect)].`",
+                std::any::type_name::<T>()
+            );
+        }
     }
 
     #[inline]

@@ -44,3 +44,15 @@ where
         Some(State(state.0.clone()))
     }
 }
+
+#[derive(Clone, Debug)]
+pub struct Collected<T>(pub T);
+
+impl<'a, T> CliParam<'a> for Collected<T>
+where
+    T: Send + Sync + Clone + 'static,
+{
+    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
+        args.get::<Self>().cloned()
+    }
+}

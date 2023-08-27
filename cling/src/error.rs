@@ -109,8 +109,21 @@ impl Display for CliError {
             | CliError::InputString => {
                 write!(f, "Input string cannot be parsed as UNIX shell command")
             }
+            #[allow(unused_variables)]
             | CliError::InvalidHandler(msg) => {
-                write!(f, "\n\n** Cling Handler Design Error **\n\n{}", msg)
+                #[cfg(not(debug_assertions))]
+                let r = write!(
+                    f,
+                    "\n\n** Cling Handler Design Error **\n\n{}",
+                    "Detailed error message available only in debug builds.",
+                );
+                #[cfg(debug_assertions)]
+                let r = write!(
+                    f,
+                    "\n\n** Cling Handler Design Error **\n\n{}",
+                    msg
+                );
+                r
             }
         }
     }
@@ -149,12 +162,21 @@ impl CliError {
             | e @ CliError::InputString => {
                 print_formatted_error(&mut stderr, "", &e.to_string())
             }
+            #[allow(unused_variables)]
             | CliError::InvalidHandler(msg) => {
-                print_formatted_error(
+                #[cfg(not(debug_assertions))]
+                let r = print_formatted_error(
+                    &mut stderr,
+                    "\n\n** Cling Handler Design Error **\n\n",
+                    "Detailed error message available only in debug builds.",
+                );
+                #[cfg(debug_assertions)]
+                let r = print_formatted_error(
                     &mut stderr,
                     "\n\n** Cling Handler Design Error **\n\n",
                     msg,
-                )
+                );
+                r
             }
         }
     }

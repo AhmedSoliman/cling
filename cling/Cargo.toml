@@ -25,7 +25,7 @@ async-trait = { version = "0.1.70" }
 indoc = { version = "2.0" }
 termcolor = { version = "1.2" }
 shlex = { version = "1.1.0", optional = true }
-tracing = { version = "0.1" }
+tracing = { version = "0.1", features = ["log"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -38,6 +38,10 @@ rand = { version = "0.8.5" }
 rustyline = { version = "12.0.0" }
 # Use clap with default features in tests
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
+# For testing collecting external types
+clap-verbosity-flag = { version = "2.0.1" }
+env_logger = { version = "0.10.0" }
+log = { version = "0.4.20" }
 
 [features]
 default = ["derive", "shlex"]
@@ -54,6 +58,10 @@ path = "../examples/simple.rs"
 [[example]]
 name = "multi-level-sync"
 path = "../examples/multi-level-sync.rs"
+
+[[example]]
+name = "bad-practice"
+path = "../examples/bad-practice.rs"
 
 [[example]]
 name = "repl"

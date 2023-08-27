@@ -9,6 +9,14 @@ pub struct CliOpts {
     /// What?
     #[arg(short)]
     use_me: bool,
+    #[clap(flatten)]
+    // `collected` attribute allows collecting types that do not implement the
+    // CliParam trait. This is useful when you need to collect external types.
+    // However, those types will need to implement `Clone` and cling will log a
+    // warning if the same type is collected multiple times in the execution
+    // path of the command.
+    #[cling(collect)]
+    verbosity: clap_verbosity_flag::Verbosity,
     #[arg(short)]
     colors: Option<Vec<Colors>>,
     #[command(flatten)]
@@ -85,12 +93,18 @@ async fn run_calc(calc: &Calculator) {
 
 async fn init(
     State(database): State<Database>,
+    Collected(verbosity): Collected<clap_verbosity_flag::Verbosity>,
+    // Can also be extracted by reference.
+    // Collected(verbosity): Collected<&clap_verbosity_flag::Verbosity>,
     common: &CommonOpts,
     colors: Option<Vec<Colors>>,
 ) {
     println!(
-        ">> Hello world! {:?}, color: {:?}, database: {:?}",
-        common, colors, database
+        ">> Hello world! {:?}, color: {:?}, database: {:?}, verbosity: {:?}",
+        common,
+        colors,
+        database,
+        verbosity.log_level().unwrap()
     );
 }
 
@@ -131,6 +145,7 @@ assert_impl_all!(CliOpts: ClapClingExt, cling::prelude::Parser, Send, Sync, CliR
 
 #[tokio::main]
 async fn main() -> ClingFinished<CliOpts> {
+    env_logger::builder().init();
     let database = Database {
         _data: "Loads of data".to_owned(),
     };

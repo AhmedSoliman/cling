@@ -87,14 +87,15 @@ pub use cling_derive::CliParam;
 #[cfg(feature = "derive")]
 pub use cling_derive::CliRunnable;
 pub use error::{CliError, CliErrorHandler};
-pub use extractors::State;
+pub use extractors::{Collected, State};
 pub use handler::IntoCliResult;
 pub use params::CliParam;
-/// Used by cling_derive
-pub use static_assertions;
 
 #[doc(hidden)]
+/// Used by cling_derive
 pub mod _private {
+    pub use {static_assertions, tracing};
+
     pub use crate::handler::*;
     pub use crate::params::*;
 }

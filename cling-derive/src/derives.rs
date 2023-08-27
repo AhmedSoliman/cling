@@ -63,11 +63,18 @@ fn expand_struct(
 ) -> darling::Result<TokenStream> {
     let mut acc = darling::Error::accumulator();
 
+    let type_ident = &attrs.ident;
     let span = attrs.run.span();
     let run_self = match &attrs.run {
         // We have a handler for this runnable, let's make sure we execute it.
         | Some(run) => {
             quote::quote_spanned! { span =>
+                ::cling::_private::tracing::log::debug!(
+                    target: "cling",
+                    "Running handler `{}` of type `{}`",
+                    stringify!(#run),
+                    stringify!(#type_ident),
+                );
                 cling::_private::CliHandler::call(#run, args)?.into_result().await?;
             }
         }
@@ -93,6 +100,7 @@ fn expand_struct(
 
         // We only support named structs. darling validation will ensure this.
         let field_name = field.ident.clone().unwrap();
+        let field_type = &field.ty;
         if field.is_subcommand() {
             let span = field.ty.span();
             found_subcommand = true;
@@ -101,12 +109,54 @@ fn expand_struct(
                 <dyn ::cling::prelude::CliRunnable>::call(&self.#field_name, args).await?;
             });
         } else {
-            // Not a subcommand, let's see if we should collect it.
-            collect_arguments.extend(quote::quote! {
-                if (&self.#field_name).as_collectable().can_collect() {
-                    args.insert(self.#field_name.clone());
-                }
-            });
+            // Escape hatch if this particular field is problematic.
+            if field.skip {
+                collect_arguments.extend(quote::quote! {
+                    ::cling::_private::tracing::log::debug!(
+                        target: "cling",
+                        "Skipping `{}.{}` because it's marked with `#[cling(skip)]`",
+                        stringify!(#type_ident),
+                        stringify!(#field_name),
+                    );
+                });
+            } else if field.collect {
+                // If the field is marked with #[cling(collect)], we will wrap
+                // it in Collected<T> and store it wrapped.
+                collect_arguments.extend(quote::quote! {
+                    ::cling::_private::tracing::log::debug!(
+                        target: "cling",
+                        "Collecting type `{}` from `{}.{}` \
+                            because it's marked with `#[cling(collect)]`. \
+                            This can be extracted with cling::prelude::Collected<T> at runtime.",
+                        stringify!(#field_type),
+                        stringify!(#type_ident),
+                        stringify!(#field_name),
+                    );
+                    args.insert(::cling::prelude::Collected(self.#field_name.clone()));
+                });
+            } else {
+                // Not a subcommand, let's see if we should collect it.
+                collect_arguments.extend(quote::quote! {
+                    if (&self.#field_name).as_collectable().can_collect() {
+                        ::cling::_private::tracing::log::debug!(
+                            target: "cling",
+                            "Collecting type `{}` from `{}.{}` because it derives `CliParam`",
+                            stringify!(#field_type),
+                            stringify!(#type_ident),
+                            stringify!(#field_name),
+                        );
+                        args.insert(self.#field_name.clone());
+                    } else {
+                        ::cling::_private::tracing::log::trace!(
+                            target: "cling",
+                            "Skipping `{}.{}` because `{}` doesn't implement `CliParam`",
+                            stringify!(#type_ident),
+                            stringify!(#field_name),
+                            stringify!(#field_type),
+                        );
+                    }
+                });
+            }
         }
     }
 
@@ -230,6 +280,6 @@ fn gen_runnable_impl(
                 Ok(())
             }
         }
-        ::cling::static_assertions::assert_impl_all!(#name #generics: Clone);
+        ::cling::_private::static_assertions::assert_impl_all!(#name #generics: Clone);
     }
 }
