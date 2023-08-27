@@ -3,5 +3,11 @@ args = ["honk", "3"]
 stdout = """
 Honk Honk Honk !
 """
-stderr = ""
+stderr = """
+[[..] DEBUG cling] Collecting type `CommonOpts` from `MyApp.opts` because it derives `CliParam`
+[[..] TRACE cling] Skipping `HonkOpts.times` because `u8` doesn't implement `CliParam`
+[[..] DEBUG cling] Running handler `honk` of type `HonkOpts`
+"""
 
+[env.add]
+RUST_LOG = "trace"

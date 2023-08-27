@@ -6,6 +6,16 @@ stdout = """
 >> Calculator: Calculator { color: false, operation: Subtract(SubtractOpts { num1: 10, num2: 2 }) }
 """
 stderr = """
+[[..] TRACE cling] Skipping `CliOpts.use_me` because `bool` doesn't implement `CliParam`
+[[..] DEBUG cling] Collecting type `clap_verbosity_flag :: Verbosity` from `CliOpts.verbosity` because it's marked with `#[cling(collect)]`. This can be extracted with cling::prelude::Collected<T> at runtime.
+[[..] DEBUG cling] Collecting type `Option < Vec < Colors > >` from `CliOpts.colors` because it derives `CliParam`
+[[..] DEBUG cling] Collecting type `CommonOpts` from `CliOpts.common` because it derives `CliParam`
+[[..] DEBUG cling] Running handler `init` of type `CliOpts`
+[[..] TRACE cling] Skipping `Calculator.color` because `bool` doesn't implement `CliParam`
+[[..] DEBUG cling] Running handler `run_calc` of type `Calculator`
+[[..] TRACE cling] Skipping `SubtractOpts.num1` because `u64` doesn't implement `CliParam`
+[[..] TRACE cling] Skipping `SubtractOpts.num2` because `u64` doesn't implement `CliParam`
+[[..] DEBUG cling] Running handler `run_subtract` of type `SubtractOpts`
 
 
 ** Cling Handler Design Error **
@@ -29,3 +39,4 @@ In `complex::run_subtract`: Type `&complex::AddOpts` was not collected from inpu
 
 [env.add]
 TERM = "dumb"
+RUST_LOG = "trace"

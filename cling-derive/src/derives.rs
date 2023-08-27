@@ -215,6 +215,13 @@ fn expand_enum(
                 | Some(run) => {
                     variant_tokens.push(quote::quote_spanned! { span =>
                         #enum_name::#variant_name => {
+                            ::cling::_private::tracing::log::debug!(
+                                target: "cling",
+                                "Running handler `{}` of variant `{}::{}`",
+                                stringify!(#run),
+                                stringify!(#enum_name),
+                                stringify!(#variant_name),
+                            );
                             cling::_private::CliHandler::call(#run, args)?.into_result().await?;
                         }
                     });

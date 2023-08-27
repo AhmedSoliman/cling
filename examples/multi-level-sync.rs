@@ -50,6 +50,7 @@ fn beep() {
 
 #[tokio::main]
 async fn main() {
+    env_logger::builder().init();
     Cling::<MyApp>::default_run_and_exit().await;
     println!("Hello World");
 }

@@ -4,4 +4,10 @@ status.code = 0
 stdout = """
 Beep, Beep!
 """
-stderr = ""
+stderr = """
+[[..] DEBUG cling] Collecting type `CommonOpts` from `MyApp.opts` because it derives `CliParam`
+[[..] DEBUG cling] Running handler `beep` of variant `Command::Beep`
+"""
+
+[env.add]
+RUST_LOG = "trace"
