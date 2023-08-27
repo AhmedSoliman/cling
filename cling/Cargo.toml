@@ -1,6 +1,6 @@
 [package]
 name = "cling"
-description = "An opinionated Rust framework for building multi-level command-line applications on top of clap.rs"
+description = "A Rust framework for building multi-level command-line applications using clap.rs"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -13,7 +13,10 @@ readme = "../README.md"
 
 [dependencies]
 cling-derive = { path = "../cling-derive", version = "0.0.1-alpha.1", optional = true }
-clap = { version = "4.3.21", features = ["env", "derive", "wrap_help"] }
+clap = { version = "4.3.21", default-features = false, features = [
+    "std",
+    "derive",
+] }
 clap-stdin = { version = "0.2.1" }
 static_assertions = { workspace = true }
 anyhow = { version = "1.0" }
@@ -22,6 +25,7 @@ async-trait = { version = "0.1.70" }
 indoc = { version = "2.0" }
 termcolor = { version = "1.2" }
 shlex = { version = "1.1.0", optional = true }
+tracing = { version = "0.1" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -32,6 +36,8 @@ filetime = { version = "0.2.22" }
 # For examples
 rand = { version = "0.8.5" }
 rustyline = { version = "12.0.0" }
+# Use clap with default features in tests
+clap = { version = "4.3.21", default-features = true, features = ["derive"] }
 
 [features]
 default = ["derive", "shlex"]

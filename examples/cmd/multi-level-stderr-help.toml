@@ -3,7 +3,7 @@ args = []
 status.code = 2
 stdout = ""
 stderr = """
-An opinionated Rust framework for building multi-level command-line applications on top of clap.rs
+A Rust framework for building multi-level command-line applications using clap.rs
 
 Usage: multi-level-sync[EXE] [OPTIONS] <COMMAND>
 
