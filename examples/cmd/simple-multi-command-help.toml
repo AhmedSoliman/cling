@@ -1,15 +1,15 @@
-bin.name = "multi-level-sync"
+bin.name = "simple-multi-command"
 args = []
 status.code = 2
 stdout = ""
 stderr = """
-A Rust framework for building multi-level command-line applications using clap.rs
+A simple multi-command example using cling
 
-Usage: multi-level-sync[EXE] [OPTIONS] <COMMAND>
+Usage: simple-multi-command[EXE] [OPTIONS] <COMMAND>
 
 Commands:
-  honk  
-  beep  
+  honk  Honk the horn!
+  beep  Beep beep!
   help  Print this message or the help of the given subcommand(s)
 
 Options:
