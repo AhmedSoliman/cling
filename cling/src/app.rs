@@ -6,7 +6,7 @@ use clap::Parser;
 
 use super::error::{format_clap_error, CliErrorHandler};
 use crate::error::CliError;
-use crate::params::CollectedParams;
+use crate::params::CollectedArgs;
 
 mod _private {
     pub struct Build;
@@ -18,8 +18,8 @@ use _private::*;
 
 #[doc(hidden)]
 #[async_trait::async_trait]
-pub trait CliRunnable: Send + Sync {
-    async fn call(&self, args: &mut CollectedParams) -> Result<(), CliError>;
+pub trait Run: Send + Sync {
+    async fn call(&self, args: &mut CollectedArgs) -> Result<(), CliError>;
 }
 
 type ClingReady<T> = Cling<T, Ready>;
@@ -32,7 +32,7 @@ type ClingReady<T> = Cling<T, Ready>;
 /// ```rust, no_run
 /// use cling::prelude::*;
 ///
-/// #[derive(CliRunnable, Parser, Debug, Clone)]
+/// #[derive(Run, Parser, Debug, Clone)]
 /// #[cling(run = "run")]
 /// pub struct App {
 ///     /// Turn debugging information on
@@ -58,7 +58,7 @@ pub type ClingFinished<T> = Cling<T, Finished>;
 /// ```
 /// use cling::prelude::*;
 ///
-/// #[derive(CliRunnable, Parser, Debug, Clone)]
+/// #[derive(Run, Parser, Debug, Clone)]
 /// #[cling(run = "run")]
 /// pub struct App {
 ///     /// Turn debugging information on
@@ -77,7 +77,7 @@ pub type ClingFinished<T> = Cling<T, Finished>;
 /// }
 /// ```
 pub struct Cling<T, S = Build> {
-    env: Environment,
+    settings: Settings,
     _status: PhantomData<S>,
     inner: ClingInner<T>,
 }
@@ -85,31 +85,31 @@ pub struct Cling<T, S = Build> {
 /// Holds configuration for cling framework.
 #[allow(dead_code)]
 #[derive(Default, Clone)]
-struct Environment {}
+struct Settings {}
 
 enum ClingInner<T> {
     Ready {
         parsed: T,
-        collected_params: CollectedParams,
+        collected_params: CollectedArgs,
     },
     Finished {
         result: Result<(), CliError>,
-        collected_params: CollectedParams,
+        collected_params: CollectedArgs,
         _parsed_type: PhantomData<T>,
     },
 }
 
-impl<T: CliRunnable + Parser> Cling<T, Finished> {
+impl<T: Run + Parser> Cling<T, Finished> {
     /// Instantiate a successfully finished Cling application. This is useful
     /// when you want to return a successful Cling instance from `main()`
     /// directly.
     pub fn success() -> ClingFinished<T> {
         ClingFinished {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Finished {
                 result: Ok(()),
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
                 _parsed_type: PhantomData,
             },
         }
@@ -120,11 +120,11 @@ impl<T: CliRunnable + Parser> Cling<T, Finished> {
     /// `main()`.
     pub fn failed(e: impl Into<CliError>) -> ClingFinished<T> {
         ClingFinished {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Finished {
                 result: Err(e.into()),
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
                 _parsed_type: PhantomData,
             },
         }
@@ -132,28 +132,28 @@ impl<T: CliRunnable + Parser> Cling<T, Finished> {
 }
 
 /// Parses T with clap and runs until completion
-impl<T: CliRunnable + Parser> Cling<T, Build> {
+impl<T: Run + Parser> Cling<T, Build> {
     /// Create a Cling application from a parsed clap struct.
     pub fn new(parsed: T) -> ClingReady<T> {
         ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed,
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         }
     }
 
     /// [Provisional]
     #[allow(dead_code)]
-    fn with_env(parsed: T, env: Environment) -> ClingReady<T> {
+    fn with_settings(parsed: T, settings: Settings) -> ClingReady<T> {
         ClingReady {
-            env,
+            settings,
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed,
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         }
     }
@@ -169,11 +169,11 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
             | Ok(parsed) => Cling::new(parsed).run().await,
             | Err(e) => {
                 ClingFinished {
-                    env: Environment::default(),
+                    settings: Settings::default(),
                     _status: PhantomData,
                     inner: ClingInner::Finished {
                         result: Err(e.into()),
-                        collected_params: CollectedParams::new(),
+                        collected_params: CollectedArgs::new(),
                         _parsed_type: PhantomData,
                     },
                 }
@@ -184,11 +184,11 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
     /// Parse command line arguments and exit if parsing failed.
     pub fn parse() -> ClingReady<T> {
         ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed: <T as clap::Parser>::parse(),
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         }
     }
@@ -197,12 +197,12 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
     /// application.
     pub fn try_parse() -> Result<ClingReady<T>, CliError> {
         Ok(ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed: <T as clap::Parser>::try_parse()
                     .map_err(format_clap_error::<T>)?,
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         })
     }
@@ -213,12 +213,12 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
         B: Into<std::ffi::OsString> + Clone,
     {
         Ok(ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed: <T as clap::Parser>::try_parse_from(itr)
                     .map_err(format_clap_error::<T>)?,
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         })
     }
@@ -249,11 +249,11 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
         let parsed = <T as clap::Parser>::try_parse_from(args)
             .map_err(format_clap_error::<T>)?;
         Ok(ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed,
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         })
     }
@@ -261,13 +261,13 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
     /// Parse command line arguments and aborts the program if parsing failed.
     pub fn parse_or_exit() -> ClingReady<T> {
         ClingReady {
-            env: Environment::default(),
+            settings: Settings::default(),
             _status: PhantomData,
             inner: ClingInner::Ready {
                 parsed: <T as clap::Parser>::try_parse()
                     .map_err(format_clap_error::<T>)
                     .unwrap_or_exit(),
-                collected_params: CollectedParams::new(),
+                collected_params: CollectedArgs::new(),
             },
         }
     }
@@ -279,7 +279,7 @@ impl<T: CliRunnable + Parser> Cling<T, Build> {
 }
 
 /// Cling is now ready to run.
-impl<T: CliRunnable + Parser> Cling<T, Ready> {
+impl<T: Run + Parser> Cling<T, Ready> {
     pub async fn run_and_exit(self) -> ! {
         let res = self.run().await;
         res.result().then_exit()
@@ -304,13 +304,12 @@ impl<T: CliRunnable + Parser> Cling<T, Ready> {
             unreachable!()
         };
 
-        let result =
-            <T as CliRunnable>::call(&parsed, &mut collected_params).await;
+        let result = <T as Run>::call(&parsed, &mut collected_params).await;
         // We ensure that transitioning to ClingFinished only happens when we
         // have a result. Therefore, it's safe to unwrap() the result in
         // ClingFinished.
         ClingFinished {
-            env: self.env,
+            settings: self.settings,
             _status: PhantomData,
             inner: ClingInner::Finished {
                 collected_params,
@@ -334,13 +333,16 @@ impl<T: CliRunnable + Parser> Cling<T, Ready> {
             unreachable!()
         };
         // Put the state the state
-        collected_params.insert(crate::extractors::State(state));
+        collected_params.insert(
+            crate::extractors::State(state),
+            /* override_is_expected = */ true,
+        );
         Self::run(self).await
     }
 }
 
 /// Cling program has terminated and results can be introspected.
-impl<T: CliRunnable + Parser> Cling<T, Finished> {
+impl<T: Run + Parser> Cling<T, Finished> {
     pub fn result_ref(&self) -> &Result<(), CliError> {
         let ClingInner::Finished { ref result, .. } = self.inner else {
             unreachable!()
@@ -363,7 +365,7 @@ impl<T: CliRunnable + Parser> Cling<T, Finished> {
         self.result_ref().is_err()
     }
 
-    pub fn collected_parameters(&self) -> &CollectedParams {
+    pub fn collected_parameters(&self) -> &CollectedArgs {
         let ClingInner::Finished {
             ref collected_params,
             ..
@@ -374,7 +376,7 @@ impl<T: CliRunnable + Parser> Cling<T, Finished> {
         collected_params
     }
 
-    pub fn collected_arguments_mut(&mut self) -> &mut CollectedParams {
+    pub fn collected_arguments_mut(&mut self) -> &mut CollectedArgs {
         let ClingInner::Finished {
             ref mut collected_params,
             ..
@@ -396,7 +398,7 @@ impl<T: CliRunnable + Parser> Cling<T, Finished> {
 /// ```
 /// use cling::prelude::*;
 ///
-/// #[derive(CliRunnable, Parser, Debug, Clone)]
+/// #[derive(Run, Parser, Debug, Clone)]
 /// #[cling(run = "run")]
 /// pub struct App {
 ///     /// Turn debugging information on
@@ -424,7 +426,7 @@ pub trait ClapClingExt: Sized {
 #[async_trait::async_trait]
 impl<T> ClapClingExt for T
 where
-    T: CliRunnable + Parser + Sync + Send + 'static,
+    T: Run + Parser + Sync + Send + 'static,
 {
     fn into_cling(self) -> ClingReady<Self> {
         Cling::<T>::new(self)
@@ -433,7 +435,7 @@ where
 
 /// Allows main() to return ClingFinished and it'll report the error correctly
 /// if any.
-impl<T: CliRunnable + Parser> Termination for ClingFinished<T> {
+impl<T: Run + Parser> Termination for ClingFinished<T> {
     fn report(self) -> ExitCode {
         if let Err(e) = self.result() {
             // Silently ignore IO errors.
@@ -445,7 +447,7 @@ impl<T: CliRunnable + Parser> Termination for ClingFinished<T> {
 }
 
 /// Convert a [CliError] into a [`ClingFinished`].
-impl<T: CliRunnable + Parser> From<CliError> for ClingFinished<T> {
+impl<T: Run + Parser> From<CliError> for ClingFinished<T> {
     fn from(value: CliError) -> Self {
         Cling::failed(value)
     }

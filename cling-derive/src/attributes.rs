@@ -8,7 +8,7 @@ use darling::{FromDeriveInput, FromField, FromVariant};
     supports(struct_named, struct_unit, enum_newtype, enum_unit),
     forward_attrs(command, clap)
 )]
-pub(crate) struct CliRunnableAttrs {
+pub(crate) struct RunAttrs {
     pub ident: syn::Ident,
     pub data: darling::ast::Data<EnumVariantAttrs, StructFieldAttrs>,
     pub generics: syn::Generics,
@@ -37,26 +37,16 @@ pub(crate) struct StructFieldAttrs {
 
 impl StructFieldAttrs {
     pub fn is_subcommand(&self) -> bool {
-        for attr in &self.attrs {
-            if attr.path().is_ident("command") || attr.path().is_ident("clap") {
-                if let Ok(meta_list) = parse_attribute_to_meta_list(attr) {
-                    if let Ok(arg) = meta_list.parse_args::<syn::Ident>() {
-                        if arg == "subcommand" {
-                            return true;
-                        }
-                    }
-                }
-            }
-        }
-        false
+        has_subcommand(&self.attrs)
     }
 }
 
 #[derive(Debug, Clone, FromField)]
 #[darling(attributes(), forward_attrs(command, clap))]
 pub(crate) struct VariantFieldAttrs {
-    // automatically populated by darling
+    pub ty: syn::Type,
 }
+
 // Attributes for enum-variant level #[cling(...)]
 #[derive(Debug, Clone, FromVariant)]
 #[darling(attributes(cling), forward_attrs(command, clap))]
@@ -68,9 +58,24 @@ pub(crate) struct EnumVariantAttrs {
     pub run: Option<syn::Path>,
 }
 
-// Attributes for derive CliParam
+// Attributes for derive Collect
 #[derive(Debug, Clone, FromDeriveInput)]
 #[darling(attributes(), supports(any), forward_attrs(command, clap))]
-pub(crate) struct CliParamAttrs {
+pub(crate) struct CollectAttrs {
     pub ident: syn::Ident,
+}
+
+fn has_subcommand(attrs: &[syn::Attribute]) -> bool {
+    for attr in attrs {
+        if attr.path().is_ident("command") || attr.path().is_ident("clap") {
+            if let Ok(meta_list) = parse_attribute_to_meta_list(attr) {
+                if let Ok(arg) = meta_list.parse_args::<syn::Ident>() {
+                    if arg == "subcommand" {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    false
 }

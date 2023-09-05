@@ -1,6 +1,6 @@
 use cling::prelude::*;
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 #[cling(run = "run")]
 pub struct Options {
