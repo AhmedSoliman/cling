@@ -1,6 +1,6 @@
 [package]
 name = "cling"
-description = "A Rust framework for building multi-level command-line applications using clap.rs"
+description = "A lightweight framework that simplifies building complex command-line applications with [clap.rs](https://clap.rs)"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
@@ -8,23 +8,22 @@ license.workspace = true
 repository.workspace = true
 rust-version = "1.70.0"
 categories = ["command-line-interface"]
-include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
+include = ["**/*.rs", "../README.md", "../LICENSE-*", "../examples"]
 readme = "../README.md"
 
 [dependencies]
-cling-derive = { path = "../cling-derive", version = "0.0.1-alpha.1", optional = true }
+cling-derive = { path = "../cling-derive", version = "0.1", optional = true }
 clap = { version = "4.3.21", default-features = false, features = [
     "std",
     "derive",
 ] }
-clap-stdin = { version = "0.2.1" }
-static_assertions = { workspace = true }
 anyhow = { version = "1.0" }
-colored = { version = "2.0" }
 async-trait = { version = "0.1.70" }
 indoc = { version = "2.0" }
-termcolor = { version = "1.2" }
+rustversion = "1.0.14"
 shlex = { version = "1.1.0", optional = true }
+static_assertions = { workspace = true }
+termcolor = { version = "1.2" }
 tracing = { version = "0.1.37", features = ["log"] }
 
 [dev-dependencies]
@@ -36,6 +35,7 @@ filetime = { version = "0.2.22" }
 # For examples
 rand = { version = "0.8.5" }
 rustyline = { version = "12.0.0" }
+colored = { version = "2.0" }
 # Use clap with default features in tests
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
 # For testing collecting external types
@@ -43,8 +43,11 @@ clap-verbosity-flag = { version = "2.0.1" }
 env_logger = { version = "0.10.0" }
 log = { version = "0.4.20" }
 
+[build-dependencies]
+rustc_version = "0.4.0"
+
 [features]
-default = ["derive", "shlex"]
+default = ["derive"]
 derive = ["dep:cling-derive"]
 
 [[example]]
@@ -56,14 +59,22 @@ name = "simple"
 path = "../examples/simple.rs"
 
 [[example]]
-name = "multi-level-sync"
-path = "../examples/multi-level-sync.rs"
+name = "simple-multi-command"
+path = "../examples/simple-multi-command.rs"
 
 [[example]]
 name = "bad-practice"
 path = "../examples/bad-practice.rs"
 
 [[example]]
+name = "projects"
+path = "../examples/projects.rs"
+
+[[example]]
 name = "repl"
 path = "../examples/repl.rs"
 required-features = ["shlex"]
+
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-unknown-linux-gnu"

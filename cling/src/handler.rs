@@ -1,72 +1,28 @@
 use std::any::type_name;
-use std::future::Future;
 
 use indoc::formatdoc;
 
-use crate::params::{CliParam, CollectedParams};
+use crate::effects::HandlerEffect;
+use crate::params::{CollectedArgs, HandlerParam};
 use crate::prelude::CliError;
+use crate::IntoEffect;
 
-// Internal struct, not meant for public use.
-pub struct _Sync;
-// Internal struct, not meant for public use.
-pub struct _Async;
-
-/// trait for functions that can be used to handle command line commands.
-pub trait CliHandler<'a, Type, Input, Output>
+/// Trait for functions that handle command line commands.
+pub trait Handler<'a, Type, Input, Output, F>
 where
-    Output: IntoCliResult<Type>,
+    F: HandlerEffect,
+    Output: IntoEffect<Type, Effect = F>,
 {
-    fn call(self, args: &'a mut CollectedParams) -> Result<Output, CliError>;
+    fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError>;
 }
 
-/// trait to handle function return types:
-/// - `Result<(), E> where E: Into<CliError>`
-/// - `()`
-#[async_trait::async_trait]
-pub trait IntoCliResult<Type> {
-    async fn into_result(self) -> Result<(), CliError>;
-}
-
-#[async_trait::async_trait]
-impl IntoCliResult<_Sync> for () {
-    async fn into_result(self) -> Result<(), CliError> {
-        Ok(())
-    }
-}
-
-#[async_trait::async_trait]
-impl<E> IntoCliResult<_Sync> for Result<(), E>
-where
-    E: Into<CliError>,
-    Self: Send,
-{
-    async fn into_result(self) -> Result<(), CliError> {
-        self.map_err(Into::into)
-    }
-}
-
-#[async_trait::async_trait]
-impl<T, Output> IntoCliResult<_Async> for T
-where
-    T: Future<Output = Output> + Send,
-    Output: IntoCliResult<_Sync> + Send,
-{
-    async fn into_result(self) -> Result<(), CliError> {
-        self.await.into_result().await
-    }
-}
-
-// we want to handle functions that return:
-// 1. Result<(), E> where E: Into<CliError>
-// 2. ()
-//
-// So type that implements trait IntoCliResult is accepted.
-impl<'a, Type, F, Output> CliHandler<'a, Type, ((),), Output> for F
+impl<'a, Type, F, Output, Effect> Handler<'a, Type, ((),), Output, Effect> for F
 where
     F: FnOnce() -> Output + Send,
-    Output: IntoCliResult<Type>,
+    Effect: HandlerEffect,
+    Output: IntoEffect<Type, Effect = Effect>,
 {
-    fn call(self, _args: &'a mut CollectedParams) -> Result<Output, CliError> {
+    fn call(self, _args: &'a mut CollectedArgs) -> Result<Output, CliError> {
         Ok(self())
     }
 }
@@ -75,13 +31,14 @@ macro_rules! handler_impl {
     ($($ty:ident),* $(,)?) => {
 
         #[allow(non_snake_case, unused_mut)]
-        impl<'a, Type, F, Output, $($ty),*> CliHandler<'a, Type, (($($ty,)*),), Output> for F
+        impl<'a, Type, F, Output, $($ty),*, Effect> Handler<'a, Type, (($($ty,)*),), Output, Effect> for F
         where
             F: FnOnce($($ty,)*) -> Output + Send,
-            Output: IntoCliResult<Type>,
-            $($ty: CliParam<'a> + Send),*
+            Output: IntoEffect<Type, Effect = Effect>,
+            Effect: HandlerEffect,
+            $($ty: HandlerParam<'a> + Send),*
         {
-            fn call(self, args: &'a mut CollectedParams) -> Result<Output, CliError> {
+            fn call(self, args: &'a mut CollectedArgs) -> Result<Output, CliError> {
                 let handler_name = type_name::<Self>();
 
                 $(
@@ -90,9 +47,9 @@ macro_rules! handler_impl {
                     collected.sort();
                     return Err(CliError::InvalidHandler(formatdoc!{"
                         In `{handler_name}`: Type `{}` was not collected from input arguments. Possible reasons:
-                           - The type doesn't implement `CliParam` (add derive(CliParam))
+                           - The type doesn't implement `Collect` (add #[derive(Collect)])
                            - The struct field wasn't marked with `#[cling(collect)]`
-                           - The type is not a field in any type leading to this command
+                           - The type is not present in any fields, enums, or structs leading to this command in the command hierarchy.
                            - The type is defined with Option<T> or Vec<T> and you used T, or vice versa
 
                            Those are the types that have been collected: {:#?}
@@ -132,37 +89,37 @@ handler_impl!(
 const _: () = {
     #[derive(Clone)]
     struct CommonOpts;
-
-    impl<'a> CliParam<'a> for CommonOpts {
-        fn extract_param(args: &'a CollectedParams) -> Option<Self> {
-            args.get::<Self>().cloned()
-        }
-    }
+    impl crate::params::Collect for CommonOpts {}
 
     async fn handle<
         'a,
         Type,
-        Output: IntoCliResult<Type>,
+        Output: IntoEffect<Type, Effect = F>,
         X,
-        T: CliHandler<'a, Type, X, Output>,
+        F: HandlerEffect,
+        T: Handler<'a, Type, X, Output, F>,
     >(
-        args: &'a mut CollectedParams,
+        args: &'a mut CollectedArgs,
         handler: T,
     ) {
-        handler.call(args).unwrap().into_result().await.unwrap();
+        crate::_private::Handler::call(handler, args)
+            .unwrap()
+            .into_effect()
+            .await
+            .unwrap();
     }
 
     async fn test_empty_sync_functions() {
         // returns Unit.
         fn noop() {}
-        let mut args = CollectedParams::default();
+        let mut args = CollectedArgs::default();
         handle(&mut args, noop).await;
     }
 
     async fn test_empty_functions() {
         // returns Unit.
         async fn noop() {}
-        let mut args = CollectedParams::default();
+        let mut args = CollectedArgs::default();
         handle(&mut args, noop).await;
     }
 
@@ -170,15 +127,15 @@ const _: () = {
         async fn noop() -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedParams::default();
+        let mut args = CollectedArgs::default();
         handle(&mut args, noop).await;
     }
 
     async fn test_functions_with_1_arg() {
-        async fn noop(_opts: CommonOpts) -> Result<(), anyhow::Error> {
+        async fn noop(_opts: &CommonOpts) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedParams::default();
+        let mut args = CollectedArgs::default();
         handle(&mut args, noop).await;
     }
 
@@ -187,7 +144,7 @@ const _: () = {
         async fn noop(_opts: &CommonOpts) -> Result<(), anyhow::Error> {
             Ok(())
         }
-        let mut args = CollectedParams::default();
+        let mut args = CollectedArgs::default();
         handle(&mut args, noop).await;
     }
 };
