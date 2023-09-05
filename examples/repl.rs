@@ -5,7 +5,7 @@ use colored::Colorize;
 use rustyline::error::ReadlineError;
 use rustyline::DefaultEditor;
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 #[cling(run = "init")]
 pub struct CliOpts {
@@ -15,7 +15,7 @@ pub struct CliOpts {
     pub command: Commands,
 }
 
-#[derive(CliRunnable, Subcommand, Debug, Clone)]
+#[derive(Run, Subcommand, Debug, Clone)]
 pub enum Commands {
     /// Ask me a question
     #[command(name = "ask")]
@@ -29,14 +29,14 @@ pub enum Commands {
     WhoAmI,
 }
 
-#[derive(CliParam, Parser, Debug, Clone)]
+#[derive(Collect, Args, Debug, Clone)]
 pub struct CommonOpts {
     /// Turn debugging information on
     #[arg(short, long, global = true, action = clap::ArgAction::Count)]
     pub verbose: u8,
 }
 
-#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[derive(Run, Args, Collect, Debug, Clone)]
 #[cling(run = "guess")]
 pub struct Guess {
     pub num: u8,

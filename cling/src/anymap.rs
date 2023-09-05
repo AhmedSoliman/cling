@@ -91,7 +91,6 @@ impl AnyMap {
 #[cfg(test)]
 mod tests {
     use super::*;
-    // Write tests for AnyMap
     #[test]
     fn test_anymap() {
         #[derive(Debug, PartialEq)]

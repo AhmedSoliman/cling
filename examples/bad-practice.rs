@@ -1,6 +1,6 @@
 use cling::prelude::*;
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[cling(run = "run")]
 pub struct App {
     /// Tell me your name
@@ -24,7 +24,7 @@ fn run(
          `#[cling(collect)]`ed the same type 'String' twice, the last \
          collected will always win. \n\nRun with `RUST_LOG=warn` to see the \
          warning the cling generates, or `RUST_LOG=trace` to see details when \
-         params are collected."
+         arguments were collected."
     );
     Ok(())
 }

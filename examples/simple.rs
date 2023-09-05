@@ -1,16 +1,16 @@
 use anyhow::bail;
 use cling::prelude::*;
 
-#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[cling(run = "run")]
 pub struct App {
     #[clap(flatten)]
     pub options: Options,
 }
 
-// Structs that derive CliParam are optionally available for handlers as
-// parameters both as value and reference.
-#[derive(CliParam, Parser, Debug, Clone)]
+// Structs that derive Collect can be valid arguments for handlers, they will be
+// passed through a shared reference. See `run` below.
+#[derive(Collect, Args, Debug, Clone)]
 pub struct Options {
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
@@ -28,6 +28,7 @@ async fn run(options: &Options) -> Result<(), anyhow::Error> {
 
 #[tokio::main]
 async fn main() -> ClingFinished<App> {
+    env_logger::builder().init();
     // Cling::parse().run().await
     // Or, return ClingFinished<T> to let cling handle error printing and exit
     // code in a more convenient way.

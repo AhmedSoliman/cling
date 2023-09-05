@@ -1,11 +1,11 @@
-bin.name = "multi-level-sync"
+bin.name = "simple-multi-command"
 args = ["beep"]
 status.code = 0
 stdout = """
 Beep, Beep!
 """
 stderr = """
-[[..] DEBUG cling] Collecting type `CommonOpts` from `MyApp.opts` because it derives `CliParam`
+[[..] DEBUG cling] Collecting type `CommonOpts` from `MyApp.opts` because it derives `Collect`
 [[..] DEBUG cling] Running handler `beep` of variant `Command::Beep`
 """
 
