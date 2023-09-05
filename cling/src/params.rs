@@ -1,5 +1,23 @@
 use crate::anymap::AnyMap;
 
+// With the hope that one day marker traits attributes
+// [marker_trait_attr](https://github.com/rust-lang/rust/issues/29864) will be
+// stabilized, we will leave this as a conditional feature on unstable rustc
+// until this day comes. In short, this allows us to automatically collect all
+// relevant clap types (including Option<T> and Vec<T>) without asking users to
+// explicitly mark their clap types with #[derive(Collect)].
+#[cfg_attr(unstable, marker)]
+pub trait Collect {}
+
+#[cfg(unstable)]
+impl<T> Collect for T where T: clap::ValueEnum {}
+#[cfg(unstable)]
+impl<T> Collect for T where T: clap::Args {}
+
+impl<T> Collect for Option<T> where T: Collect {}
+impl<T> Collect for Vec<T> where T: Collect {}
+
+// --
 // This is a clever trick inspired by "autref" specialization by
 // [dtolnay](https://github.com/dtolnay/case-studies/blob/master/autoref-specialization/README.md) to
 // that allows us to selectively choose which types can be collected based on a
@@ -26,10 +44,7 @@ pub trait CollectableKind {
 }
 
 // Does not require autoref is called with &(arg).collectable()
-impl<T> CollectableKind for T where
-    T: for<'a> CliParam<'a> + Clone + Send + Sync + ?Sized
-{
-}
+impl<T> CollectableKind for T where T: Collect {}
 
 pub trait UnknownKind {
     fn as_collectable(&self) -> Uncollectable {
@@ -41,50 +56,19 @@ pub trait UnknownKind {
 impl<T> UnknownKind for &T {}
 
 #[doc(hidden)]
-pub trait CliParam<'a>: Sized {
-    fn extract_param(args: &'a CollectedParams) -> Option<Self>;
+pub trait HandlerParam<'a>: Sized {
+    fn extract_param(args: &'a CollectedArgs) -> Option<Self>;
 }
 
-// implementation is per type that derives CliParam
-// impl<'a, T> CliParam<'a> for T
-// where
-//     T: Parser + Send + Sync + Clone + 'static,
-// {
-//     fn extract_param(args: &'a CollectedParams) -> Option<Self> {
-//         args.get::<Self>().cloned()
-//     }
-// }
-
-/// Returns the value by reference if T implements CliParam!
-impl<'a, T> CliParam<'a> for &'a T
+/// Blanked implementation that allows handlers to accept shared references to
+/// any collectable type.
+impl<'a, T> HandlerParam<'a> for &'a T
 where
     T: Sync + Send + 'static,
-    T: CliParam<'a> + 'static,
+    T: Collect,
 {
-    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
+    fn extract_param(args: &'a CollectedArgs) -> Option<Self> {
         args.get::<T>()
-    }
-}
-
-impl<'a, T> CliParam<'a> for Vec<T>
-where
-    T: Sync + Send + 'static,
-    T: CliParam<'a> + 'static,
-    Vec<T>: Clone,
-{
-    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
-        args.get::<Vec<T>>().cloned()
-    }
-}
-
-impl<'a, T> CliParam<'a> for Option<T>
-where
-    T: Sync + Send + 'static,
-    T: CliParam<'a> + 'static,
-    Option<T>: Clone,
-{
-    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
-        args.get::<Option<T>>().cloned()
     }
 }
 
@@ -94,14 +78,14 @@ where
 /// environment, context, or other global states that were injected by upper
 /// layers.
 #[derive(Default)]
-pub struct CollectedParams {
+pub struct CollectedArgs {
     map: Option<AnyMap>,
 }
 
-impl CollectedParams {
+impl CollectedArgs {
     #[inline]
     pub fn new() -> Self {
-        CollectedParams { map: None }
+        CollectedArgs { map: None }
     }
 
     pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
@@ -114,17 +98,21 @@ impl CollectedParams {
 
     /// Inserts a value into the collected arguments. If the value already
     /// exists, it will be returned.
-    pub fn insert<T: Send + Sync + 'static>(&mut self, val: T) {
+    pub fn insert<T: Send + Sync + 'static>(
+        &mut self,
+        val: T,
+        override_is_expected: bool,
+    ) {
         let res = self.map.get_or_insert_with(Default::default).insert(val);
-        if res.is_some() {
+        if res.is_some() && !override_is_expected {
             // We have collected the same type twice, we overwrite with the
             // newest value but we must inform the user/dev about it
             // to avoid confusion.
             ::tracing::log::warn!(
                 "Collected the same type {} twice while aggregating \
-                 parameters. This is usually a sign of a bug in the code. \
+                 arguments. This is usually a sign of a bug in the code. \
                  Either two struct fields in the hierarchy of this command \
-                 derive `CliParam` or a field (or more) of the same type is \
+                 derive `Collect` or a field (or more) of the same type is \
                  annotated with `#[cling(collect)].`",
                 std::any::type_name::<T>()
             );

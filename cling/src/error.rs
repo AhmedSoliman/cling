@@ -5,7 +5,7 @@ use clap::CommandFactory;
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::prelude::ClingFinished;
-use crate::CliRunnable;
+use crate::Run;
 
 pub trait CliErrorHandler {
     type Output;
@@ -201,9 +201,7 @@ impl CliError {
         std::process::exit(self.exit_code() as i32)
     }
 
-    pub fn into_finished<T: CliRunnable + clap::Parser>(
-        self,
-    ) -> ClingFinished<T> {
+    pub fn into_finished<T: Run + clap::Parser>(self) -> ClingFinished<T> {
         Into::into(self)
     }
 }

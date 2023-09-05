@@ -1,17 +1,18 @@
-use crate::params::{CliParam, CollectedParams};
+use crate::params::{CollectedArgs, HandlerParam};
 
 /// Extractor for state in handlers
 ///
 /// When a cling program gets executed with a state of type `S`. The state can
-/// be accessed via this extractor in any handler. There are a few restrictions
-/// on the type `S`. It must implement `Clone` and it must be `Send + Sync`.
-/// Typically, this is achieved by wrapping the state in an `Arc<Mutex<_>>`.
+/// be accessed via this extractor in any handler.
+///
+/// Type `S` must implement [Clone] as it gets cloned every time this extractor
+/// runs.
 ///
 /// Example:
 /// ```rust
 /// use cling::prelude::*;
 ///
-/// #[derive(CliParam, ValueEnum, Debug, Clone)]
+/// #[derive(Collect, ValueEnum, Debug, Clone)]
 /// pub enum Colors {
 ///     Red,
 ///     Green,
@@ -25,19 +26,19 @@ use crate::params::{CliParam, CollectedParams};
 ///
 /// async fn init(
 ///     State(database): State<Database>,
-///     colors: Option<Vec<Colors>>,
+///     colors: &Option<Vec<Colors>>,
 /// ) {
 ///     println!( ">> Hello world! color: {:?}, database: {:?}", colors, database);
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct State<S: Clone + Send + Sync + 'static>(pub S);
 
-impl<'a, S> CliParam<'a> for State<S>
+impl<'a, S> HandlerParam<'a> for State<S>
 where
     S: Send + Sync + Clone + 'static,
 {
-    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
+    fn extract_param(args: &'a CollectedArgs) -> Option<Self> {
         let Some(state) = args.get::<State<S>>() else {
             return None;
         };
@@ -46,13 +47,14 @@ where
 }
 
 #[derive(Clone, Debug)]
+/// An extractor for fields annotated with `#[cling(collect)]`
 pub struct Collected<T>(pub T);
 
-impl<'a, T> CliParam<'a> for Collected<T>
+impl<'a, T> HandlerParam<'a> for Collected<T>
 where
     T: Send + Sync + Clone + 'static,
 {
-    fn extract_param(args: &'a CollectedParams) -> Option<Self> {
+    fn extract_param(args: &'a CollectedArgs) -> Option<Self> {
         args.get::<Self>().cloned()
     }
 }

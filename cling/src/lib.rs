@@ -1,62 +1,71 @@
+// Enables unstable features on nightly/beta rustc.
+#![cfg_attr(unstable, feature(marker_trait_attr))]
 #![forbid(unsafe_code)]
-//! # Cling
-//!
-//! Cling is a framework that makes it easy to write command line applications
-//! in Rust.
-//!
-//! Example:
-//! ```
-//! use cling::prelude::*;
-//!
-//! #[derive(CliRunnable, Parser, Debug, Clone)]
-//! #[cling(run = "run")]
-//! pub struct App {
-//!     /// Turn debugging information on
-//!     #[arg(short, long, action = ArgAction::Count)]
-//!     pub debug: u8,
-//! }
-//!
-//!
-//! pub async fn run() {
-//!     println!("Hello, world!");
-//! }
-//!
-//! #[tokio::main]
-//! async fn main() -> ClingFinished<App> {
-//!     Cling::parse_and_run().await
-//! }
+#![doc = include_str!("../../README.md")]
 
 mod anymap;
 mod app;
+mod effects;
 mod error;
 mod extractors;
 mod handler;
 mod params;
 
 pub use app::*;
-/// Derive a clap struct/enum to be passed as a handler parameter.
+#[cfg(feature = "derive")]
+/// Macro that adds a few assertions to help you investigate
+/// errors if the compiler is not happy about a handler signature.
 ///
-/// Typically, this is implemented on your types by using the
-/// `#[derive(CliParam)]` attribute.
+/// ## Example:
+/// ```rust,no_run
+/// use cling::prelude::*;
+/// # #[derive(Clone)]
+/// # pub struct Session {
+/// #     user_id: String,
+/// # }
+/// # #[derive(Collect, Args, Debug, Clone)]
+/// # pub struct CreateProjectArgs {
+/// #     /// Name of the project
+/// #     pub name: String,
+/// # }
 ///
-/// **Note:** _Types that implement [CliParam] must also
-/// be [Clone]._
+/// #[cling_handler]
+/// pub async fn create_project(
+///     State(session): State<Session>,
+///     args: &CreateProjectArgs,
+/// ) -> anyhow::Result<()> {
+///     println!(
+///         "Creating project '{}' for user {}.",
+///         args.name, session.user_id
+///     );
+///     println!("Would have created the project here");
+///     Ok(())
+/// }
+/// ```
+pub use cling_derive::cling_handler;
+#[cfg(feature = "derive")]
+/// Mark a clap struct/enum to be passed as a handler argument.
+///
+/// **Note:** _Types that implement [Collect] must also be [Clone]._
 ///
 /// ## Example:
 /// ```rust
 /// use cling::prelude::*;
-/// // Structs that derive CliParam are optionally available for handlers as
-/// // parameters both as value and reference.
-/// #[derive(CliParam, Parser, Debug, Clone)]
+/// #[derive(Collect, Args, Debug, Clone)]
 /// pub struct Options {
 ///     /// Turn debugging information on
 ///     #[arg(short, long, action = clap::ArgAction::Count)]
 ///     pub debug: u8,
 /// }
+///
+/// // Options must derive `Collect`
+/// fn run(options: &Options) {
+///    println!("Debug level is {}", options.debug);
+/// }
 /// ```
+pub use cling_derive::Collect;
 #[cfg(feature = "derive")]
-pub use cling_derive::CliParam;
-/// Derive clap structs as cling runnable command.
+/// Mark clap structs as cling runnable command.
 ///
 /// This trait needs to be derived for clap structs or enums that will run
 /// a function handler or a if has subcommands. Note that cling requires
@@ -67,7 +76,7 @@ pub use cling_derive::CliParam;
 /// ```rust
 /// use cling::prelude::*;
 ///
-/// #[derive(CliRunnable, Parser, Debug, Clone)]
+/// #[derive(Run, Parser, Debug, Clone)]
 /// #[cling(run = "do_nothing")]
 /// pub struct App {
 ///     /// Turn debugging information on
@@ -78,24 +87,23 @@ pub use cling_derive::CliParam;
 /// fn do_nothing() {}
 /// ```
 ///
-/// Runnable structs will execute the handler specified in `#[cling(run =
+/// [Run] types will execute the handler specified in `#[cling(run =
 /// "...")]` The string value must be a valid path to a function.
 ///
 /// Handler functions can be async or sync, cling will handle this
 /// transparently. However, Cling only supports async on the top level,
 /// you'll need to pick an async runtime to execute the application.
-#[cfg(feature = "derive")]
-pub use cling_derive::CliRunnable;
+pub use cling_derive::Run;
+pub use effects::{IntoEffect, SetState};
 pub use error::{CliError, CliErrorHandler};
 pub use extractors::{Collected, State};
-pub use handler::IntoCliResult;
-pub use params::CliParam;
 
 #[doc(hidden)]
 /// Used by cling_derive
 pub mod _private {
     pub use {static_assertions, tracing};
 
+    pub use crate::effects::*;
     pub use crate::handler::*;
     pub use crate::params::*;
 }
@@ -104,38 +112,15 @@ pub mod _private {
 ///
 /// This also imports clap but your program will need to have a dependency on
 /// clap in Cargo.toml.
-///
-/// The following is a common pattern:
-/// ```rust
-/// use cling::prelude::*;
-///
-/// #[derive(CliRunnable, Parser, Debug, Clone)]
-/// #[cling(run = "run")]
-/// pub struct App {
-///     /// Turn debugging information on
-///     #[arg(short, long, action = ArgAction::Count)]
-///     pub debug: u8,
-/// }
-///
-/// pub async fn run() {
-///     println!("Hello, world!");
-/// }
-///
-/// #[tokio::main]
-/// async fn main() {
-///     let app = App::parse();
-///     let app = app.into_cling();
-///     app.run_and_exit().await;
-/// }
-/// ```
 pub mod prelude {
     pub use async_trait::async_trait;
     pub use clap::*;
     #[cfg(feature = "derive")]
-    pub use cling_derive::*;
+    #[doc(no_inline)]
+    pub use cling_derive::{cling_handler, Collect, Run};
 
     pub use crate::app::*;
     pub use crate::error::*;
     pub use crate::extractors::*;
-    pub use crate::handler::CliHandler;
+    pub use crate::handler::Handler;
 }
