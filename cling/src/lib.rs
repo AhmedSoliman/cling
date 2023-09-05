@@ -1,7 +1,7 @@
 // Enables unstable features on nightly/beta rustc.
 #![cfg_attr(unstable, feature(marker_trait_attr))]
 #![forbid(unsafe_code)]
-#![doc = include_str!("../../README.md")]
+#![doc = include_str!("../README.md")]
 
 mod anymap;
 mod app;
