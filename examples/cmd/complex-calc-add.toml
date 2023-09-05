@@ -2,10 +2,10 @@ bin.name = "complex"
 args = ["calculator", "--color", "add", "1", "2"]
 status.code = 0
 stdout = """
->> Hello world! CommonOpts { debug: 0 }, color: None, database: Database { _data: \"Loads of data\" }
->> Calculator: Calculator { color: true, operation: Add(AddOpts { num1: 1, num2: 2 }) }
+>> Hello world! CommonArgs { debug: 0 }, color: None, verbosity: Error
+Database is currently Database { _data: \"Loads of data\" } but we will override that!
+>> Calculator: Calculator { color: true, operation: Add(AddArgs { num1: 1, num2: 2 }) }
+Database: Database { _data: \"Loads of calculator data\" }
 1 + 2 = 3
 """
 stderr = ""
-
-

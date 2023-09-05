@@ -1,12 +1,12 @@
-bin.name = "multi-level-sync"
+bin.name = "simple-multi-command"
 args = ["honk"]
-status.code = 1
+status.code = 2
 stdout = ""
 stderr = """
 error: the following required arguments were not provided:
   <TIMES>
 
-Usage: multi-level-sync[EXE] honk <TIMES>
+Usage: simple-multi-command[EXE] honk <TIMES>
 
 For more information, try '--help'.
 """

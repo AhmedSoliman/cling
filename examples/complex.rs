@@ -2,29 +2,38 @@ use cling::prelude::*;
 use colored::Colorize;
 use static_assertions::assert_impl_all;
 
-#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 #[cling(run = "init")]
-pub struct CliOpts {
+pub struct CliArgs {
     /// What?
     #[arg(short)]
     use_me: bool,
+    #[clap(flatten)]
+    // `collected` attribute allows collecting types that do not implement the
+    // [Collect] trait. This is useful when you need to collect external types.
+    // However, those types must implement [Clone] and cling will log a
+    // warning if the same type is collected multiple times in the execution
+    // path of the command (if logging is enabled).
+    #[cling(collect)]
+    verbosity: clap_verbosity_flag::Verbosity,
+    // colors will be collected because [Colors] implement [Collect]
     #[arg(short)]
     colors: Option<Vec<Colors>>,
     #[command(flatten)]
-    pub common: CommonOpts,
+    pub common: CommonArgs,
     #[command(subcommand)]
     pub command: Commands,
 }
 
-#[derive(CliParam, ValueEnum, Debug, Clone)]
+#[derive(ValueEnum, Collect, Debug, Clone)]
 pub enum Colors {
     Red,
     Green,
     Blue,
 }
 
-#[derive(CliRunnable, Subcommand, Debug, Clone)]
+#[derive(Run, Subcommand, Debug, Clone)]
 pub enum Commands {
     /// Calculate things
     Calculator(Calculator),
@@ -34,14 +43,14 @@ pub enum Commands {
     WhoAmI,
 }
 
-#[derive(CliParam, Parser, Debug, Clone)]
-pub struct CommonOpts {
+#[derive(Collect, Args, Debug, Clone)]
+pub struct CommonArgs {
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub debug: u8,
 }
 
-#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[derive(Run, Collect, Parser, Debug, Clone)]
 #[cling(run = "run_calc")]
 pub struct Calculator {
     /// Enable color output
@@ -52,24 +61,24 @@ pub struct Calculator {
     pub operation: CalcOperations,
 }
 
-#[derive(CliRunnable, Subcommand, Debug, Clone)]
+#[derive(Run, Subcommand, Debug, Clone)]
 pub enum CalcOperations {
     /// Add two numbers
-    Add(AddOpts),
+    Add(AddArgs),
     /// Subtract two numbers
-    Subtract(SubtractOpts),
+    Subtract(SubtractArgs),
 }
 
-#[derive(CliRunnable, CliParam, Parser, Debug, Clone)]
+#[derive(Run, Collect, Parser, Debug, Clone)]
 #[cling(run = "run_add")]
-pub struct AddOpts {
+pub struct AddArgs {
     pub num1: u64,
     pub num2: u64,
 }
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(Run, Collect, Parser, Debug, Clone)]
 #[cling(run = "run_subtract")]
-pub struct SubtractOpts {
+pub struct SubtractArgs {
     pub num1: u64,
     pub num2: u64,
 }
@@ -79,19 +88,39 @@ struct Database {
     _data: String,
 }
 
-async fn run_calc(calc: &Calculator) {
+async fn run_calc(
+    State(database): State<Database>,
+    calc: &Calculator,
+) -> State<Database> {
+    println!(
+        "Database is currently {:?} but we will override that!",
+        database
+    );
+
+    let database = Database {
+        _data: "Loads of calculator data".to_owned(),
+    };
     println!(">> Calculator: {:?}", calc);
+    State(database)
 }
 
 async fn init(
-    State(database): State<Database>,
-    common: &CommonOpts,
-    colors: Option<Vec<Colors>>,
-) {
+    Collected(verbosity): Collected<clap_verbosity_flag::Verbosity>,
+    // Can also be extracted by reference.
+    // Collected(verbosity): Collected<&clap_verbosity_flag::Verbosity>,
+    common: &CommonArgs,
+    colors: &Option<Vec<Colors>>,
+) -> State<Database> {
     println!(
-        ">> Hello world! {:?}, color: {:?}, database: {:?}",
-        common, colors, database
+        ">> Hello world! {:?}, color: {:?}, verbosity: {:?}",
+        common,
+        colors,
+        verbosity.log_level().unwrap()
     );
+    let database = Database {
+        _data: "Loads of data".to_owned(),
+    };
+    State(database)
 }
 
 // Note that handlers can be sync as well.
@@ -100,16 +129,15 @@ fn groot() {
 }
 
 // my add handler
-pub async fn run_add(
+async fn run_add(
+    // database state was created in init() by returning State() as an effect.
+    State(database): State<Database>,
     calc: &Calculator,
-    add_opts: &AddOpts,
+    add: &AddArgs,
 ) -> Result<(), CliError> {
-    let output = format!(
-        "{} + {} = {}",
-        add_opts.num1,
-        add_opts.num2,
-        add_opts.num1 + add_opts.num2
-    );
+    println!("Database: {:?}", database);
+    let output =
+        format!("{} + {} = {}", add.num1, add.num2, add.num1 + add.num2);
 
     if calc.color {
         println!("{}", output.green());
@@ -121,19 +149,16 @@ pub async fn run_add(
 }
 
 // Note that this is SYNC handler.
-// Fails in runtime, we expect AddOpts but this will never be collected in the
-// subtraction path.
-pub fn run_subtract(_calc: &Calculator, _add_opts: &AddOpts) {
+// Fails in runtime, we expect AddArgs but this will never be collected because
+// `AddArgs` is never visited while traversing the type tree during execution.
+pub fn run_subtract(_calc: &Calculator, _add: &AddArgs) {
     println!("Never gets called!");
 }
 
-assert_impl_all!(CliOpts: ClapClingExt, cling::prelude::Parser, Send, Sync, CliRunnable);
+assert_impl_all!(CliArgs: ClapClingExt, cling::prelude::Parser, Send, Sync, Run);
 
 #[tokio::main]
-async fn main() {
-    let database = Database {
-        _data: "Loads of data".to_owned(),
-    };
-    let opts = CliOpts::parse();
-    opts.run_with_state_and_exit(database).await;
+async fn main() -> ClingFinished<CliArgs> {
+    env_logger::builder().init();
+    Cling::parse().run().await
 }

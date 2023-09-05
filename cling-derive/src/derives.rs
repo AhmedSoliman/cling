@@ -2,17 +2,17 @@ use darling::ast::Fields;
 use darling::{Error, FromDeriveInput};
 use proc_macro2::TokenStream;
 use syn::spanned::Spanned;
-use syn::{DeriveInput, Ident};
+use syn::DeriveInput;
 
 use crate::attributes::{
-    CliParamAttrs,
-    CliRunnableAttrs,
+    CollectAttrs,
     EnumVariantAttrs,
+    RunAttrs,
     StructFieldAttrs,
 };
 
-pub fn derive_cli_runnable(input: &DeriveInput) -> TokenStream {
-    let attrs = match CliRunnableAttrs::from_derive_input(input) {
+pub fn derive_run(input: &DeriveInput) -> TokenStream {
+    let attrs = match RunAttrs::from_derive_input(input) {
         | Ok(attrs) => attrs,
         | Err(e) => {
             return e.write_errors();
@@ -22,8 +22,8 @@ pub fn derive_cli_runnable(input: &DeriveInput) -> TokenStream {
     expand(attrs)
 }
 
-pub fn derive_cli_param(input: &DeriveInput) -> TokenStream {
-    let attrs = match CliParamAttrs::from_derive_input(input) {
+pub fn derive_collect(input: &DeriveInput) -> TokenStream {
+    let attrs = match CollectAttrs::from_derive_input(input) {
         | Ok(attrs) => attrs,
         | Err(e) => {
             return e.write_errors();
@@ -31,21 +31,12 @@ pub fn derive_cli_param(input: &DeriveInput) -> TokenStream {
     };
 
     let name = &attrs.ident;
-    //let generics = &attrs.generics;
-    gen_from_cli_param_impl(name)
-}
-
-fn gen_from_cli_param_impl(name: &Ident) -> TokenStream {
     quote::quote! {
-        impl<'a> cling::args::CliParam<'a> for #name {
-            fn from_args(args: &'a cling::args::CollectedArgs) -> core::option::Option<Self> {
-                args.get::<Self>().cloned()
-            }
-        }
+        impl<'a> cling::_private::Collect for #name {}
     }
 }
 
-fn expand(attrs: CliRunnableAttrs) -> TokenStream {
+fn expand(attrs: RunAttrs) -> TokenStream {
     let tokens = match &attrs.data {
         | darling::ast::Data::Enum(variants) => expand_enum(&attrs, variants),
         | darling::ast::Data::Struct(fields) => expand_struct(&attrs, fields),
@@ -58,17 +49,27 @@ fn expand(attrs: CliRunnableAttrs) -> TokenStream {
 }
 
 fn expand_struct(
-    attrs: &CliRunnableAttrs,
+    attrs: &RunAttrs,
     fields: &Fields<StructFieldAttrs>,
 ) -> darling::Result<TokenStream> {
     let mut acc = darling::Error::accumulator();
 
+    let type_ident = &attrs.ident;
     let span = attrs.run.span();
     let run_self = match &attrs.run {
         // We have a handler for this runnable, let's make sure we execute it.
         | Some(run) => {
             quote::quote_spanned! { span =>
-                cling::handler::CliHandler::call(#run, args)?.into_result().await?;
+                ::cling::_private::tracing::log::debug!(
+                    target: "cling",
+                    "Running handler `{}` of type `{}`",
+                    stringify!(#run),
+                    stringify!(#type_ident),
+                );
+                {
+                    let effect = cling::_private::Handler::call(#run, args)?.into_effect().await?;
+                    effect.apply_effect(args);
+                }
             }
         }
         | None => quote::quote!(),
@@ -80,9 +81,9 @@ fn expand_struct(
     let mut found_subcommand = false;
     // We collect our own object in all cases.
     collect_arguments.extend(quote::quote! {
-        if (self).as_collectable().can_collect() {
-            args.insert(self.clone());
-        }
+         if (self).as_collectable().can_collect() {
+             args.insert(self.clone(), false);
+         }
     });
     for field in &fields.fields {
         if found_subcommand {
@@ -93,20 +94,63 @@ fn expand_struct(
 
         // We only support named structs. darling validation will ensure this.
         let field_name = field.ident.clone().unwrap();
+        let field_type = &field.ty;
         if field.is_subcommand() {
             let span = field.ty.span();
             found_subcommand = true;
-            // We assume that it's a CliRunnable as well.
+            // We assume that it's Run as well.
             subcommand_runs.extend(quote::quote_spanned! { span =>
-                <dyn ::cling::prelude::CliRunnable>::call(&self.#field_name, args).await?;
+                <dyn ::cling::prelude::Run>::call(&self.#field_name, args).await?;
             });
         } else {
-            // Not a subcommand, let's see if we should collect it.
-            collect_arguments.extend(quote::quote! {
-                if (&self.#field_name).as_collectable().can_collect() {
-                    args.insert(self.#field_name.clone());
-                }
-            });
+            // Escape hatch if this particular field is problematic.
+            if field.skip {
+                collect_arguments.extend(quote::quote! {
+                    ::cling::_private::tracing::log::debug!(
+                        target: "cling",
+                        "Skipping `{}.{}` because it's marked with `#[cling(skip)]`",
+                        stringify!(#type_ident),
+                        stringify!(#field_name),
+                    );
+                });
+            } else if field.collect {
+                // If the field is marked with #[cling(collect)], we will wrap
+                // it in Collected<T> and store it wrapped.
+                collect_arguments.extend(quote::quote! {
+                    ::cling::_private::tracing::log::debug!(
+                        target: "cling",
+                        "Collecting type `{}` from `{}.{}` \
+                            because it's marked with `#[cling(collect)]`. \
+                            This can be extracted with cling::prelude::Collected<T> at runtime.",
+                        stringify!(#field_type),
+                        stringify!(#type_ident),
+                        stringify!(#field_name),
+                    );
+                    args.insert(::cling::prelude::Collected(self.#field_name.clone()), false);
+                });
+            } else {
+                // Not a subcommand, let's see if we should collect it.
+                collect_arguments.extend(quote::quote! {
+                    if (&self.#field_name).as_collectable().can_collect() {
+                        ::cling::_private::tracing::log::debug!(
+                            target: "cling",
+                            "Collecting type `{}` from `{}.{}` because it derives `Collect`",
+                            stringify!(#field_type),
+                            stringify!(#type_ident),
+                            stringify!(#field_name),
+                        );
+                        args.insert(self.#field_name.clone(), false);
+                    } else {
+                        ::cling::_private::tracing::log::trace!(
+                            target: "cling",
+                            "Skipping `{}.{}` because `{}` doesn't implement `Collect`",
+                            stringify!(#type_ident),
+                            stringify!(#field_name),
+                            stringify!(#field_type),
+                        );
+                    }
+                });
+            }
         }
     }
 
@@ -117,8 +161,8 @@ fn expand_struct(
         // will fail, but we might come back to this in the future and
         // provide better heuristic.
         acc.push(Error::custom(
-            "CliRunnable must have a #[cling(run = ...)] attribute or a \
-             subcommand field",
+            "must have a #[cling(run = ...)] attribute or a clap(subcommand) \
+             field",
         ));
         return acc.finish_with(TokenStream::new());
     }
@@ -140,14 +184,14 @@ fn expand_struct(
 
 /// Expanding for sub-commands enum
 fn expand_enum(
-    attrs: &CliRunnableAttrs,
+    attrs: &RunAttrs,
     variants: &Vec<EnumVariantAttrs>,
 ) -> darling::Result<TokenStream> {
     if attrs.run.is_some() {
         return Err(Error::custom(
             "Runnable enum cannot have a #[cling(run = ...)] attribute. \
              Please mark the unit variants with #[cling(run = ...)] instead \
-             and/or derive CliRunnable for the variant newtype argument",
+             and/or derive Run for the variant newtype argument",
         ));
     }
 
@@ -165,31 +209,47 @@ fn expand_enum(
                 | Some(run) => {
                     variant_tokens.push(quote::quote_spanned! { span =>
                         #enum_name::#variant_name => {
-                            cling::handler::CliHandler::call(#run, args)?.into_result().await?;
+                            ::cling::_private::tracing::log::debug!(
+                                target: "cling",
+                                "Running handler `{}` of variant `{}::{}`",
+                                stringify!(#run),
+                                stringify!(#enum_name),
+                                stringify!(#variant_name),
+                            );
+                            {
+                                let effect = cling::_private::Handler::call(#run, args)?.into_effect().await?;
+                                effect.apply_effect(args);
+                            }
                         }
                     });
                 }
                 | None => {
-                    acc.push(Error::custom(
-                        "Unit enum variants must have a #[cling(run = ...)] \
-                         attribute",
-                    ));
+                    acc.push(
+                        Error::custom(
+                            "Unit enum variants must have a #[cling(run = \
+                             ...)] attribute",
+                        )
+                        .with_span(&variant.ident),
+                    )
                 }
             }
         } else if variant.run.is_some() {
+            let var_inner_ty =
+                &variant.fields.fields.first().expect("non-empty variant").ty;
+            let var_inner_ty = quote::quote!(#var_inner_ty).to_string();
             acc.push(
-                Error::custom(
+                Error::custom(format!(
                     "Non-unit enums cannot have #[cling(run = ...)]. Instead, \
-                     derive CliRunnable on the variant newtype argument as \
-                     usual.",
-                )
+                     derive Run on the variant inner type `{}`.",
+                    var_inner_ty,
+                ))
                 .with_span(&variant.run),
             );
         } else {
-            // We will dispatch to the newtype assuming that it's CliRunnable
+            // We will dispatch to the newtype assuming that it's Run
             variant_tokens.push(quote::quote_spanned! { span =>
                 #enum_name::#variant_name(sub) => {
-                    <dyn ::cling::prelude::CliRunnable>::call(sub, args).await?;
+                    <dyn ::cling::prelude::Run>::call(sub, args).await?;
                 }
             });
         }
@@ -206,27 +266,24 @@ fn expand_enum(
     acc.finish_with(tokens)
 }
 
-fn gen_runnable_impl(
-    attrs: &CliRunnableAttrs,
-    impl_body: TokenStream,
-) -> TokenStream {
+fn gen_runnable_impl(attrs: &RunAttrs, impl_body: TokenStream) -> TokenStream {
     let name = &attrs.ident;
     let generics = &attrs.generics;
     quote::quote! {
         #[automatically_derived]
         #[allow(clippy::all)]
         #[::cling::prelude::async_trait]
-        impl #generics ::cling::prelude::CliRunnable for #name #generics {
+        impl #generics ::cling::prelude::Run for #name #generics {
             async fn call(
                 &self,
-                args: &mut cling::args::CollectedArgs,
+                args: &mut cling::_private::CollectedArgs,
             ) -> std::result::Result<(), cling::prelude::CliError> {
-                use cling::args::{CollectableKind, CollectedArgs, UnknownKind};
-                use cling::handler::*;
+                use cling::_private::*;
 
                 #impl_body
                 Ok(())
             }
         }
+        ::cling::_private::static_assertions::assert_impl_all!(#name #generics: Clone);
     }
 }

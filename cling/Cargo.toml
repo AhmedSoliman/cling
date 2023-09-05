@@ -1,27 +1,30 @@
 [package]
 name = "cling"
-description = "An opinionated Rust framework for building multi-level command-line applications on top of clap.rs"
+description = "A lightweight framework that simplifies building complex command-line applications with [clap.rs](https://clap.rs)"
 edition.workspace = true
 version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-rust-version = "1.65.0"
+rust-version = "1.70.0"
 categories = ["command-line-interface"]
-include = ["**/*.rs", "../README.md", "../LICENSE", "../examples"]
+include = ["**/*.rs", "../README.md", "../LICENSE-*", "../examples"]
 readme = "../README.md"
 
 [dependencies]
-cling-derive = { path = "../cling-derive", version = "0.0.0-alpha.4", optional = true }
-clap = { version = "4.3.21", features = ["env", "derive", "wrap_help"] }
-clap-stdin = { version = "0.2.1" }
-thiserror = { workspace = true }
-static_assertions = { workspace = true }
+cling-derive = { path = "../cling-derive", version = "0.1", optional = true }
+clap = { version = "4.3.21", default-features = false, features = [
+    "std",
+    "derive",
+] }
 anyhow = { version = "1.0" }
-colored = { version = "2.0" }
-async-trait = { version = "0.1.65" }
+async-trait = { version = "0.1.70" }
 indoc = { version = "2.0" }
+rustversion = "1.0.14"
+shlex = { version = "1.1.0", optional = true }
+static_assertions = { workspace = true }
 termcolor = { version = "1.2" }
+tracing = { version = "0.1.37", features = ["log"] }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -29,6 +32,19 @@ trybuild = { version = "1.0.82" }
 trycmd = { version = "0.14.16", features = ["examples"] }
 # Only needed to fix an incorrect min version set in trycmd
 filetime = { version = "0.2.22" }
+# For examples
+rand = { version = "0.8.5" }
+rustyline = { version = "12.0.0" }
+colored = { version = "2.0" }
+# Use clap with default features in tests
+clap = { version = "4.3.21", default-features = true, features = ["derive"] }
+# For testing collecting external types
+clap-verbosity-flag = { version = "2.0.1" }
+env_logger = { version = "0.10.0" }
+log = { version = "0.4.20" }
+
+[build-dependencies]
+rustc_version = "0.4.0"
 
 [features]
 default = ["derive"]
@@ -43,5 +59,22 @@ name = "simple"
 path = "../examples/simple.rs"
 
 [[example]]
-name = "multi-level-sync"
-path = "../examples/multi-level-sync.rs"
+name = "simple-multi-command"
+path = "../examples/simple-multi-command.rs"
+
+[[example]]
+name = "bad-practice"
+path = "../examples/bad-practice.rs"
+
+[[example]]
+name = "projects"
+path = "../examples/projects.rs"
+
+[[example]]
+name = "repl"
+path = "../examples/repl.rs"
+required-features = ["shlex"]
+
+[package.metadata.docs.rs]
+all-features = true
+default-target = "x86_64-unknown-linux-gnu"

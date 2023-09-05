@@ -1,6 +1,6 @@
 use cling::prelude::*;
 
-#[derive(CliRunnable, Parser, Debug, Clone)]
+#[derive(Run, Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
 #[cling(run = "run")]
 pub struct Options {
@@ -16,5 +16,5 @@ pub async fn run() {
 #[tokio::main]
 async fn main() {
     let options = Options::parse();
-    options.run_and_exit().await;
+    options.into_cling().run_and_exit().await;
 }

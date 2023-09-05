@@ -1,8 +1,8 @@
 bin.name = "complex"
-args = ["whoami"]
+args = ["whoami", "--verbose"]
 status.code = 0
 stdout = """
->> Hello world! CommonOpts { debug: 0 }, color: None, database: Database { _data: \"Loads of data\" }
+>> Hello world! CommonArgs { debug: 0 }, color: None, verbosity: Warn
 I'm groot!
 """
 stderr = ""

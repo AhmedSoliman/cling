@@ -1,5 +1,10 @@
-use cling::args::{CliParam, CollectedArgs};
-use cling::handler::IntoCliResult;
+use cling::_private::{
+    Collect,
+    CollectedArgs,
+    HandlerEffect,
+    IntoEffect,
+    SetState,
+};
 use cling::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -8,22 +13,12 @@ struct CommonOpts;
 #[derive(Clone, Debug)]
 struct NotSoCommonOpts;
 
-impl<'a> CliParam<'a> for CommonOpts {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
-        args.get::<Self>().cloned()
-    }
-}
+impl Collect for CommonOpts {}
 
-impl<'a> CliParam<'a> for NotSoCommonOpts {
-    fn from_args(args: &'a CollectedArgs) -> Option<Self> {
-        args.get::<Self>().cloned()
-    }
-}
+impl Collect for NotSoCommonOpts {}
 
 async fn noop(
-    // by value,
-    opts: CommonOpts,
-    // see, we can also take reference!
+    opts: &CommonOpts,
     other_opts: &NotSoCommonOpts,
 ) -> Result<(), anyhow::Error> {
     println!("async noop: {:?} {:?}", opts, other_opts);
@@ -31,35 +26,93 @@ async fn noop(
 }
 
 fn sync_noop(
-    // by value,
-    opts: CommonOpts,
-    // see, we can also take reference!
+    opts: &CommonOpts,
     other_opts: &NotSoCommonOpts,
 ) -> Result<(), anyhow::Error> {
     println!("sync noop: {:?} {:?}", opts, other_opts);
     Ok(())
 }
 
+// Handlers can be unit
+fn unit_handler(_opts: &CommonOpts, _other_opts: &NotSoCommonOpts) {
+    println!("do nothing");
+}
+
+// Can return result of CliError
+fn handler_fails(
+    _opts: &CommonOpts,
+    _other_opts: &NotSoCommonOpts,
+) -> Result<(), CliError> {
+    Err(CliError::FailedWithMessage("handler failed".to_owned()))
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct Database;
+
+// Can return state effect in result
+fn handler_with_effect_result(
+    _opts: &CommonOpts,
+    _other_opts: &NotSoCommonOpts,
+) -> Result<State<Database>, CliError> {
+    Ok(State(Database))
+}
+
+// Can return state extract as an effect
+fn handler_with_state_extractor_effect(
+    _opts: &CommonOpts,
+    _other_opts: &NotSoCommonOpts,
+) -> State<Database> {
+    State(Database)
+}
+
+// Can return state effect directly
+fn handler_with_effect(
+    _opts: &CommonOpts,
+    _other_opts: &NotSoCommonOpts,
+) -> SetState<Database> {
+    SetState(Database)
+}
+
 async fn handle<
     'a,
     Type,
-    Output: IntoCliResult<Type>,
-    X,
-    T: CliHandler<'a, Type, X, Output>,
+    Input,
+    Effect: HandlerEffect,
+    Output: IntoEffect<Type, Effect = Effect>,
+    T: Handler<'a, Type, Input, Output, Effect>,
 >(
     args: &'a mut CollectedArgs,
     handler: T,
-) -> CliResult {
-    handler.call(args)?.into_result().await
+) -> Result<Effect, CliError> {
+    handler.call(args)?.into_effect().await
 }
 
 #[tokio::test]
-async fn handler_tests() -> CliResult {
+async fn handler_tests() -> Result<(), CliError> {
     let mut args = CollectedArgs::default();
-    args.insert(CommonOpts);
-    args.insert(NotSoCommonOpts);
+    args.insert(CommonOpts, false);
+    args.insert(NotSoCommonOpts, false);
 
-    handle(&mut args, noop).await?;
-    handle(&mut args, sync_noop).await?;
+    assert_eq!((), handle(&mut args, noop).await?);
+    assert_eq!((), handle(&mut args, sync_noop).await?);
+    assert_eq!((), handle(&mut args, unit_handler).await?);
+    assert_eq!((), handle(&mut args, unit_handler).await?);
+    assert!(handle(&mut args, handler_fails).await.is_err());
+
+    assert_eq!(
+        SetState(Database),
+        handle(&mut args, handler_with_effect_result).await?
+    );
+
+    assert_eq!(
+        SetState(Database),
+        handle(&mut args, handler_with_state_extractor_effect).await?
+    );
+
+    assert_eq!(
+        SetState(Database),
+        handle(&mut args, handler_with_effect).await?
+    );
+
     Ok(())
 }

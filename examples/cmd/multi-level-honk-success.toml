@@ -1,7 +1,0 @@
-bin.name = "multi-level-sync"
-args = ["honk", "3"]
-stdout = """
-Honk Honk Honk !
-"""
-stderr = ""
-
