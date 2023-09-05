@@ -1,0 +1,13 @@
+bin.name = "simple-multi-command"
+args = ["honk", "3"]
+stdout = """
+Honk Honk Honk !
+"""
+stderr = """
+[[..] DEBUG cling] Collecting type `CommonOpts` from `MyApp.opts` because it derives `Collect`
+[[..] TRACE cling] Skipping `HonkOpts.times` because `u8` doesn't implement `Collect`
+[[..] DEBUG cling] Running handler `honk` of type `HonkOpts`
+"""
+
+[env.add]
+RUST_LOG = "trace"
