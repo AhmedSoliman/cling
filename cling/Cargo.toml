@@ -41,7 +41,7 @@ colored = { version = "2.0" }
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
 # For testing collecting external types
 clap-verbosity-flag = { version = "2.0.1" }
-env_logger = { version = "0.10.0" }
+env_logger = { version = "0.11.0" }
 log = { version = "0.4.20" }
 
 [build-dependencies]
