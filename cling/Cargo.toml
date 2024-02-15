@@ -30,7 +30,7 @@ tracing = { version = "0.1.37", features = ["log"] }
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 trybuild = { version = "1.0.82" }
-trycmd = { version = "0.14.16", features = ["examples"] }
+trycmd = { version = "0.15.0", features = ["examples"] }
 # Only needed to fix an incorrect min version set in trycmd
 filetime = { version = "0.2.22" }
 # For examples
