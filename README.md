@@ -40,7 +40,7 @@ For more details, see:
 - [docs.rs](https://docs.rs/cling/latest/cling/)
 - [examples](examples/)
 
-*Compiler support: [requires `rustc` 1.70+][msrv]*
+*Compiler support: [requires `rustc` 1.72+][msrv]*
 
 [msrv]: #supported-rust-versions
 
