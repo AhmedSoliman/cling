@@ -56,6 +56,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.1", features = ["derive", "env"] }
+cling = { version = "0.1" }
 tokio = { version = "1.13.0", features = ["full"] }
 ```
 
@@ -341,7 +342,7 @@ Beep beep!
 
 # Supported Rust Versions
 
-Cling's minimum supported rust version is `1.70.0`.
+Cling's minimum supported rust version is `1.74.0`.
 
 # License
 
