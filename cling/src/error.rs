@@ -2,6 +2,7 @@ use std::fmt::{self, Display, Formatter};
 use std::io::Write;
 
 use clap::CommandFactory;
+use itertools::{Itertools, Position};
 use termcolor::{Color, ColorChoice, ColorSpec, StandardStream, WriteColor};
 
 use crate::prelude::ClingFinished;
@@ -101,10 +102,10 @@ impl Display for CliError {
                 write!(f, "Error: {}", e)
             }
             | CliError::Other(e) => {
-                write!(f, "Error: {}", e)
+                write!(f, "Error: {:#}", e)
             }
             | CliError::OtherWithCode(e, _) => {
-                write!(f, "Error: {}", e)
+                write!(f, "Error: {:#}", e)
             }
             | CliError::InputString => {
                 write!(f, "Input string cannot be parsed as UNIX shell command")
@@ -154,10 +155,10 @@ impl CliError {
                 print_formatted_error(&mut stderr, "", e)
             }
             | CliError::Other(e) => {
-                print_formatted_error(&mut stderr, "Error: ", &e.to_string())
+                print_anyhow_error(&mut stderr, "Error: ", e)
             }
             | CliError::OtherWithCode(e, _) => {
-                print_formatted_error(&mut stderr, "Error: ", &e.to_string())
+                print_anyhow_error(&mut stderr, "Error: ", e)
             }
             | e @ CliError::InputString => {
                 print_formatted_error(&mut stderr, "", &e.to_string())
@@ -217,6 +218,40 @@ fn print_formatted_error(
     write!(f, "{}", heading)?;
     f.reset()?;
     writeln!(f, "{}", msg)?;
+    Ok(())
+}
+
+fn print_anyhow_error(
+    f: &mut StandardStream,
+    heading: &str,
+    err: &anyhow::Error,
+) -> std::io::Result<()> {
+    f.set_color(ColorSpec::new().set_fg(Some(Color::Red)).set_bold(true))?;
+    write!(f, "{}", heading)?;
+    f.reset()?;
+    writeln!(f, "{}", err)?;
+    err.chain()
+        .skip(1)
+        .with_position()
+        .for_each(|(position, cause)| {
+            if position == Position::First {
+                let _ =
+                    f.set_color(ColorSpec::new().set_fg(Some(Color::Magenta)));
+                let _ = writeln!(f, "");
+                let _ = writeln!(f, "Caused by:");
+                let _ = f.reset();
+            }
+            let symbol = if position == Position::Last {
+                "└─"
+            } else {
+                "├─"
+            };
+            let _ =
+                f.set_color(ColorSpec::new().set_italic(true).set_dimmed(true));
+            let _ = write!(f, "  {} ", symbol);
+            let _ = f.reset();
+            let _ = writeln!(f, "{}", cause);
+        });
     Ok(())
 }
 
