@@ -17,9 +17,8 @@ mod _private {
 use _private::*;
 
 #[doc(hidden)]
-#[async_trait::async_trait]
 pub trait Run: Send + Sync {
-    async fn call(&self, args: &mut CollectedArgs) -> Result<(), CliError>;
+    fn call<'a>(&'a self, args: &'a mut CollectedArgs) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CliError>> + Send + 'a>>;
 }
 
 type ClingReady<T> = Cling<T, Ready>;
@@ -418,12 +417,10 @@ impl<T: Run + Parser> Cling<T, Finished> {
 ///     app.run_and_exit().await;
 /// }
 /// ```
-#[async_trait::async_trait]
 pub trait ClapClingExt: Sized {
     fn into_cling(self) -> ClingReady<Self>;
 }
 
-#[async_trait::async_trait]
 impl<T> ClapClingExt for T
 where
     T: Run + Parser + Sync + Send + 'static,
