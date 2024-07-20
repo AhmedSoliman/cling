@@ -272,16 +272,17 @@ fn gen_runnable_impl(attrs: &RunAttrs, impl_body: TokenStream) -> TokenStream {
     quote::quote! {
         #[automatically_derived]
         #[allow(clippy::all)]
-        #[::cling::prelude::async_trait]
         impl #generics ::cling::prelude::Run for #name #generics {
-            async fn call(
-                &self,
-                args: &mut cling::_private::CollectedArgs,
-            ) -> std::result::Result<(), cling::prelude::CliError> {
+            fn call<'a>(
+                &'a self,
+                args: &'a mut cling::_private::CollectedArgs,
+            ) ->  std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), cling::prelude::CliError>> + Send + 'a>> {
                 use cling::_private::*;
 
-                #impl_body
-                Ok(())
+                Box::pin(async move {
+                    #impl_body
+                    Ok(())
+                })
             }
         }
         ::cling::_private::static_assertions::assert_impl_all!(#name #generics: Clone);

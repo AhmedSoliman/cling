@@ -113,7 +113,6 @@ pub mod _private {
 /// This also imports clap but your program will need to have a dependency on
 /// clap in Cargo.toml.
 pub mod prelude {
-    pub use async_trait::async_trait;
     pub use clap::*;
     #[cfg(feature = "derive")]
     #[doc(no_inline)]
