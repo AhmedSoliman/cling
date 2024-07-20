@@ -30,14 +30,14 @@ where
 }
 
 /// Handlers can return any type that implements this trait
-#[async_trait::async_trait]
 pub trait IntoEffect<Type> {
     type Effect: HandlerEffect;
 
-    async fn into_effect(self) -> Result<Self::Effect, CliError>;
+    fn into_effect(
+        self,
+    ) -> impl std::future::Future<Output = Result<Self::Effect, CliError>> + Send;
 }
 
-#[async_trait::async_trait]
 impl IntoEffect<_Sync> for () {
     type Effect = ();
 
@@ -46,7 +46,6 @@ impl IntoEffect<_Sync> for () {
     }
 }
 
-#[async_trait::async_trait]
 impl<S> IntoEffect<_Sync> for State<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -58,7 +57,6 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl<S> IntoEffect<_Sync> for SetState<S>
 where
     S: Clone + Send + Sync + 'static,
@@ -70,7 +68,6 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl<E, F> IntoEffect<_Sync> for Result<F, E>
 where
     E: Into<CliError>,
@@ -89,7 +86,6 @@ where
 
 /// Adaptor to allow async handlers as long as their return type is also
 /// [IntoEffect]
-#[async_trait::async_trait]
 impl<T, Output> IntoEffect<_Async> for T
 where
     T: std::future::Future<Output = Output> + Send,
