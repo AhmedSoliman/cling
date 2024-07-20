@@ -18,7 +18,12 @@ use _private::*;
 
 #[doc(hidden)]
 pub trait Run: Send + Sync {
-    fn call<'a>(&'a self, args: &'a mut CollectedArgs) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), CliError>> + Send + 'a>>;
+    fn call<'a>(
+        &'a self,
+        args: &'a mut CollectedArgs,
+    ) -> std::pin::Pin<
+        Box<dyn std::future::Future<Output = Result<(), CliError>> + Send + 'a>,
+    >;
 }
 
 type ClingReady<T> = Cling<T, Ready>;

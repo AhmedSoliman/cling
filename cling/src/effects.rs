@@ -33,7 +33,9 @@ where
 pub trait IntoEffect<Type> {
     type Effect: HandlerEffect;
 
-    fn into_effect(self) -> impl std::future::Future<Output = Result<Self::Effect, CliError>> + Send;
+    fn into_effect(
+        self,
+    ) -> impl std::future::Future<Output = Result<Self::Effect, CliError>> + Send;
 }
 
 impl IntoEffect<_Sync> for () {
