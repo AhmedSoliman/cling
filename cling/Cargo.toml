@@ -40,7 +40,7 @@ colored = { version = "2.0" }
 # Use clap with default features in tests
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
 # For testing collecting external types
-clap-verbosity-flag = { version = "2.2.0" }
+clap-verbosity-flag = { version = "3.0.0" }
 env_logger = { version = "0.11.3" }
 log = { version = "0.4.20" }
 
