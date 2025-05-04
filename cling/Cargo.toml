@@ -36,7 +36,7 @@ filetime = { version = "0.2.22" }
 # For examples
 rand = { version = "0.8.5" }
 rustyline = { version = "14.0.0" }
-colored = { version = "2.0" }
+colored = { version = "3.0" }
 # Use clap with default features in tests
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
 # For testing collecting external types
