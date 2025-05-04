@@ -40,7 +40,7 @@ For more details, see:
 - [docs.rs](https://docs.rs/cling/latest/cling/)
 - [examples](examples/)
 
-*Compiler support: [requires `rustc` 1.75+][msrv]*
+*Compiler support: [requires `rustc` 1.77+][msrv]*
 
 [msrv]: #supported-rust-versions
 
@@ -342,7 +342,7 @@ Beep beep!
 
 # Supported Rust Versions
 
-Cling's minimum supported rust version is `1.75.0`.
+Cling's minimum supported rust version is `1.77.0`.
 
 # License
 
