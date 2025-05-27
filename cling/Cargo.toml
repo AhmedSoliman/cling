@@ -35,7 +35,7 @@ trycmd = { version = "0.15.0", features = ["examples"] }
 filetime = { version = "0.2.22" }
 # For examples
 rand = { version = "0.9" }
-rustyline = { version = "15.0.0" }
+rustyline = { version = "16.0.0" }
 colored = { version = "3.0" }
 # Use clap with default features in tests
 clap = { version = "4.3.21", default-features = true, features = ["derive"] }
