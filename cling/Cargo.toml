@@ -34,7 +34,7 @@ trycmd = { version = "0.15.0", features = ["examples"] }
 # Only needed to fix an incorrect min version set in trycmd
 filetime = { version = "0.2.22" }
 # For examples
-rand = { version = "0.9" }
+rand = { version = "0.10" }
 rustyline = { version = "17.0.1" }
 colored = { version = "3.0" }
 # Use clap with default features in tests
